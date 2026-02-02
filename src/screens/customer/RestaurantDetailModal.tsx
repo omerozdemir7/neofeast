@@ -33,6 +33,7 @@ export default function RestaurantDetailModal({ visible, restaurant, onClose, on
 
             {restaurant.menu.map((menuItem) => (
               <View key={menuItem.id} style={[styles.rowCard, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+                {menuItem.imageUrl ? <Image source={{ uri: menuItem.imageUrl }} style={styles.menuThumb} /> : null}
                 <View style={styles.menuInfo}>
                   <Text style={[styles.menuName, { color: theme.textPrimary }]}>{menuItem.name}</Text>
                   <Text style={[styles.menuDescription, { color: theme.textMuted }]}>{menuItem.description}</Text>
@@ -69,6 +70,7 @@ const styles = StyleSheet.create({
     borderWidth: 1
   },
   menuInfo: { flex: 1 },
+  menuThumb: { width: 56, height: 56, borderRadius: 8, marginRight: 10, backgroundColor: '#E5E7EB' },
   menuName: { fontWeight: 'bold' },
   menuDescription: { fontSize: 12 },
   menuPrice: { fontWeight: 'bold' },

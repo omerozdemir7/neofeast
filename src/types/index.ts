@@ -58,6 +58,7 @@ export interface Order {
   restaurantName: string;
   customerId: string;
   customerName?: string;
+  customerPhone?: string;
   items: OrderItem[];
   total: number;
   discount?: number;

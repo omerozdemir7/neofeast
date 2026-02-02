@@ -98,6 +98,7 @@ export default function CustomerCart({
       restaurantName: restaurant?.name || restaurantName,
       customerId: user._id,
       customerName: user.name,
+      customerPhone: user.phone || '',
       items: cart.map((c) => ({
         id: c.item.id,
         name: c.item.name,
