@@ -54,16 +54,26 @@ export default function App() {
   useEffect(() => {
     // 1. Restoranları Dinle
     const unsubRest = onSnapshot(collection(db, "restaurants"), (snapshot) => {
-      const list = snapshot.docs.map(doc => ({ _id: doc.id, ...doc.data() } as Restaurant));
+      const list = snapshot.docs.map((restaurantDoc) => {
+        const data = restaurantDoc.data() as Omit<Restaurant, '_id'>;
+        return { ...data, _id: restaurantDoc.id } as Restaurant;
+      });
       setRestaurants(list);
     });
 
     // 2. Siparişleri Dinle
     const unsubOrder = onSnapshot(collection(db, "orders"), (snapshot) => {
       // Order ID'si döküman ID'si olsun
-      const list = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Order));
+      const list = snapshot.docs.map((orderDoc) => {
+        const data = orderDoc.data() as Omit<Order, 'id'>;
+        return { ...data, id: orderDoc.id } as Order;
+      });
       // Tarihe göre sırala (Yeni en üstte)
-      list.sort((a, b) => (b.date > a.date ? 1 : -1)); 
+      list.sort((a, b) => {
+        const aTime = typeof a.createdAt === 'number' ? a.createdAt : Date.parse(a.date || '') || 0;
+        const bTime = typeof b.createdAt === 'number' ? b.createdAt : Date.parse(b.date || '') || 0;
+        return bTime - aTime;
+      });
       setOrders(list);
     });
 

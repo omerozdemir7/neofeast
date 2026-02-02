@@ -22,7 +22,8 @@ export default function SellerPanel({ user, restaurants, orders, onLogout }: Pro
   const myRest = restaurants.find(r => r._id === user.restaurantId || r.id === user.restaurantId);
   
   // Sadece bu restorana ait siparişleri filtrele
-  const myOrders = orders.filter(o => o.restaurantId === (myRest?._id || user.restaurantId));
+  const restaurantIds = [myRest?._id, myRest?.id, user.restaurantId].filter(Boolean) as string[];
+  const myOrders = orders.filter(o => restaurantIds.includes(o.restaurantId));
 
   // --- SİPARİŞ GÜNCELLEME ---
   const updateOrder = async (id: string, status: string) => {

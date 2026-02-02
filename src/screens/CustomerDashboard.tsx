@@ -69,7 +69,7 @@ export default function CustomerDashboard({ user, restaurants, orders, onLogout,
   };
 
   const handleAddToCart = (item: MenuItem, restaurant: Restaurant) => {
-    const restaurantId = restaurant.id || restaurant._id;
+    const restaurantId = restaurant._id || restaurant.id;
     const restaurantName = restaurant.name;
 
     setCart((prev) => {

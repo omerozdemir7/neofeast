@@ -3,6 +3,8 @@ import { View, Text, ScrollView, TouchableOpacity, TextInput, StyleSheet } from 
 import { CreditCard, Banknote, Trash2 } from 'lucide-react-native';
 import { CartItem, UserType, Restaurant } from '../../types';
 import { API_URL } from '../../utils/constants';
+import { addDoc, collection } from 'firebase/firestore';
+import { db } from '../../firebaseConfig';
 import { CustomerTheme } from './theme';
 
 interface Props {
@@ -92,7 +94,6 @@ export default function CustomerCart({
       'Adres belirtilmedi';
 
     const orderData = {
-      id: `o${Date.now()}`,
       restaurantId,
       restaurantName: restaurant?.name || restaurantName,
       customerId: user._id,
@@ -109,16 +110,13 @@ export default function CustomerCart({
       address,
       note: orderNote,
       status: 'Beklemede',
-      date: new Date().toLocaleString(),
+      date: new Date().toLocaleString('tr-TR'),
+      createdAt: Date.now(),
       paymentMethod: paymentMethod === 'Nakit' ? 'Kapida Nakit' : 'Kapida Kart'
     };
 
     try {
-      await fetch(`${API_URL}/orders`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(orderData)
-      });
+      await addDoc(collection(db, 'orders'), orderData);
       setCart([]);
       setOrderNote('');
       setPromoCode('');

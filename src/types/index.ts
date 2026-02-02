@@ -53,6 +53,7 @@ export interface Restaurant {
 
 export interface Order {
   id: string;
+  createdAt?: number;
   restaurantId: string;
   restaurantName: string;
   customerId: string;
