@@ -1,0 +1,18 @@
+{
+  "expo": {
+    "name": "neofeast",
+    "slug": "neofeast",
+    "version": "1.0.0",
+    "platforms": [
+      "ios",
+      "android",
+      "web"
+    ],
+    "entryPoint": "App.tsx",
+    "extra": {
+      "eas": {
+        "projectId": "27c807f4-a9dd-4b51-bcbc-1bc401e24195"
+      }
+    }
+  }
+}
