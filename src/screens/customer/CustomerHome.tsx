@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, ScrollView, Image, TouchableOpacity, TextInput, StyleSheet } from 'react-native';
 import { Search } from 'lucide-react-native';
 import { Restaurant } from '../../types';
+import { CustomerTheme } from './theme';
 
 interface Props {
   restaurants: Restaurant[];
@@ -10,6 +11,7 @@ interface Props {
   onSelectRestaurant: (restaurant: Restaurant) => void;
   title?: string;
   autoFocus?: boolean;
+  theme: CustomerTheme;
 }
 
 export default function CustomerHome({
@@ -18,16 +20,19 @@ export default function CustomerHome({
   onSearchChange,
   onSelectRestaurant,
   title = 'Restoranlar',
-  autoFocus = false
+  autoFocus = false,
+  theme
 }: Props) {
   return (
     <ScrollView contentContainerStyle={{ padding: 20 }}>
-      <Text style={styles.title}>{title}</Text>
-      <View style={styles.searchRow}>
-        <Search color="#9CA3AF" size={18} />
+      <Text style={[styles.title, { color: theme.textPrimary }]}>{title}</Text>
+
+      <View style={[styles.searchRow, { backgroundColor: theme.inputBackground }]}>
+        <Search color={theme.textMuted} size={18} />
         <TextInput
           placeholder="Restoran veya kategori ara"
-          style={styles.searchInput}
+          placeholderTextColor={theme.textMuted}
+          style={[styles.searchInput, { color: theme.textPrimary }]}
           value={searchQuery}
           onChangeText={onSearchChange}
           autoFocus={autoFocus}
@@ -35,20 +40,20 @@ export default function CustomerHome({
       </View>
 
       {restaurants.length === 0 && (
-        <Text style={styles.emptyText}>Restoran bulunamadi.</Text>
+        <Text style={[styles.emptyText, { color: theme.textMuted }]}>Restoran bulunamadi.</Text>
       )}
 
-      {restaurants.map((r) => (
+      {restaurants.map((restaurant) => (
         <TouchableOpacity
-          key={r._id || r.id}
-          style={styles.card}
-          onPress={() => onSelectRestaurant(r)}
+          key={restaurant._id || restaurant.id}
+          style={[styles.card, { backgroundColor: theme.surface, borderColor: theme.border }]}
+          onPress={() => onSelectRestaurant(restaurant)}
         >
-          <Image source={{ uri: r.image }} style={styles.cardImage} />
-          <View style={{ padding: 12 }}>
-            <Text style={styles.cardTitle}>{r.name}</Text>
-            <Text style={styles.cardSub}>
-              {r.category} • {r.rating} • {r.deliveryTime}
+          <Image source={{ uri: restaurant.image }} style={styles.cardImage} />
+          <View style={styles.cardBody}>
+            <Text style={[styles.cardTitle, { color: theme.textPrimary }]}>{restaurant.name}</Text>
+            <Text style={[styles.cardSub, { color: theme.textSecondary }]}>
+              {restaurant.category} - {restaurant.rating} - {restaurant.deliveryTime}
             </Text>
           </View>
         </TouchableOpacity>
@@ -62,21 +67,21 @@ const styles = StyleSheet.create({
   searchRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F3F4F6',
     paddingHorizontal: 12,
     borderRadius: 10,
     marginBottom: 16
   },
   searchInput: { flex: 1, paddingVertical: 10, marginLeft: 8 },
-  emptyText: { color: 'gray', textAlign: 'center', marginTop: 20 },
+  emptyText: { textAlign: 'center', marginTop: 20 },
   card: {
-    backgroundColor: 'white',
     marginVertical: 8,
     borderRadius: 14,
     overflow: 'hidden',
-    elevation: 2
+    elevation: 2,
+    borderWidth: 1
   },
   cardImage: { width: '100%', height: 150 },
+  cardBody: { padding: 12 },
   cardTitle: { fontSize: 16, fontWeight: 'bold' },
-  cardSub: { color: 'gray', marginTop: 2 }
+  cardSub: { marginTop: 2 }
 });

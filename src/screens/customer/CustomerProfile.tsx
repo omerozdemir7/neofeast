@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Modal, TextInput, ScrollView, Alert } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Modal, TextInput, ScrollView } from 'react-native';
 import { LogOut, MapPin, User, Receipt, Trash2, Check } from 'lucide-react-native';
 import { UserType, Address } from '../../types';
 import { db } from '../../firebaseConfig';
 import { doc, updateDoc } from 'firebase/firestore';
+import { CustomerTheme } from './theme';
 
 interface Props {
   user: UserType;
@@ -11,9 +12,10 @@ interface Props {
   onLogout: () => void;
   onNavigate: (tab: 'home' | 'search' | 'cart' | 'orders' | 'profile') => void;
   onNotify: (message: string, type?: 'success' | 'error' | 'info') => void;
+  theme: CustomerTheme;
 }
 
-export default function CustomerProfile({ user, onUpdateUser, onLogout, onNavigate, onNotify }: Props) {
+export default function CustomerProfile({ user, onUpdateUser, onLogout, onNavigate, onNotify, theme }: Props) {
   const [profileModalVisible, setProfileModalVisible] = useState(false);
   const [addressModalVisible, setAddressModalVisible] = useState(false);
   const [editUser, setEditUser] = useState<UserType>(user);
@@ -27,32 +29,31 @@ export default function CustomerProfile({ user, onUpdateUser, onLogout, onNaviga
 
   const updateUser = async (updates: Partial<UserType>, successMessage?: string) => {
     try {
-      const userRef = doc(db, "users", user._id);
-      
-      // HATA ÇÖZÜMÜ: undefined olan değerleri temizle
+      const userRef = doc(db, 'users', user._id);
       const cleanUpdates = JSON.parse(JSON.stringify(updates));
 
       await updateDoc(userRef, cleanUpdates);
       onUpdateUser({ ...user, ...updates });
-      
+
       if (successMessage) notify(successMessage, 'success');
       return true;
     } catch (e: any) {
       console.error(e);
-      notify('Güncelleme başarısız: ' + e.message, 'error');
+      notify(`Guncelleme basarisiz: ${e.message}`, 'error');
       return false;
     }
   };
 
   const saveProfile = async () => {
-    // HATA ÇÖZÜMÜ: Eğer username yoksa boş string gönderemeyiz, o alanı hiç göndermeyelim veya e-postadan üretelim.
-    // Burada || '' kullanarak undefined gitmesini engelliyoruz.
-    const ok = await updateUser({
-      name: editUser.name || '',
-      username: editUser.username || user.email?.split('@')[0] || 'kullanici', 
-      phone: editUser.phone || ''
-    }, 'Profil kaydedildi.');
-    
+    const ok = await updateUser(
+      {
+        name: editUser.name || '',
+        username: editUser.username || user.email?.split('@')[0] || 'kullanici',
+        phone: editUser.phone || ''
+      },
+      'Profil kaydedildi.'
+    );
+
     if (ok) setProfileModalVisible(false);
   };
 
@@ -61,6 +62,7 @@ export default function CustomerProfile({ user, onUpdateUser, onLogout, onNaviga
       notify('Adres bilgileri eksik.', 'error');
       return;
     }
+
     const current = user.addresses || [];
     const next: Address[] = [
       ...current,
@@ -71,136 +73,163 @@ export default function CustomerProfile({ user, onUpdateUser, onLogout, onNaviga
         isDefault: current.length === 0
       }
     ];
+
     const ok = await updateUser({ addresses: next }, 'Adres eklendi.');
     if (ok) setAddressForm({ title: '', fullAddress: '' });
   };
 
   const deleteAddress = async (id: string) => {
-    const next = (user.addresses || []).filter((a) => a.id !== id);
+    const next = (user.addresses || []).filter((address) => address.id !== id);
     await updateUser({ addresses: next }, 'Adres silindi.');
   };
 
   const setDefaultAddress = async (id: string) => {
-    const next = (user.addresses || []).map((a) => ({ ...a, isDefault: a.id === id }));
-    await updateUser({ addresses: next }, 'Varsayılan adres güncellendi.');
+    const next = (user.addresses || []).map((address) => ({ ...address, isDefault: address.id === id }));
+    await updateUser({ addresses: next }, 'Varsayilan adres guncellendi.');
   };
 
   return (
-    <View style={styles.container}>
-      <View style={styles.card}>
-        <View style={styles.avatar}>
-          <User size={40} color="white" />
+    <View style={[styles.container, { backgroundColor: theme.background }]}>
+      <View style={[styles.card, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+        <View style={[styles.avatar, { backgroundColor: theme.accent }]}>
+          <User size={40} color={theme.accentContrast} />
         </View>
-        <Text style={styles.name}>{user.name}</Text>
-        <Text style={styles.muted}>{user.email}</Text>
-        <Text style={styles.muted}>@{user.username || 'misafir'}</Text>
+        <Text style={[styles.name, { color: theme.textPrimary }]}>{user.name}</Text>
+        <Text style={[styles.muted, { color: theme.textMuted }]}>{user.email}</Text>
+        <Text style={[styles.muted, { color: theme.textMuted }]}>@{user.username || 'misafir'}</Text>
       </View>
 
-      <TouchableOpacity style={styles.rowCard} onPress={() => setProfileModalVisible(true)}>
-        <User size={20} color="#374151" />
-        <Text style={styles.rowText}>Hesap Bilgileri</Text>
-      </TouchableOpacity>
-      
-      <TouchableOpacity style={styles.rowCard} onPress={() => onNavigate('orders')}>
-        <Receipt size={20} color="#374151" />
-        <Text style={styles.rowText}>Siparişlerim</Text>
-      </TouchableOpacity>
-      
-      <TouchableOpacity style={styles.rowCard} onPress={() => setAddressModalVisible(true)}>
-        <MapPin size={20} color="#374151" />
-        <Text style={styles.rowText}>Adreslerim ({user.addresses?.length || 0})</Text>
-      </TouchableOpacity>
-      
-      <TouchableOpacity onPress={onLogout} style={[styles.rowCard, styles.logoutRow]}>
-        <LogOut size={20} color="#EF4444" />
-        <Text style={[styles.rowText, { color: '#EF4444' }]}>Çıkış Yap</Text>
+      <TouchableOpacity style={[styles.rowCard, { backgroundColor: theme.surface, borderColor: theme.border }]} onPress={() => setProfileModalVisible(true)}>
+        <User size={20} color={theme.textSecondary} />
+        <Text style={[styles.rowText, { color: theme.textSecondary }]}>Hesap Bilgileri</Text>
       </TouchableOpacity>
 
-      {/* Profil Düzenleme Modalı */}
+      <TouchableOpacity style={[styles.rowCard, { backgroundColor: theme.surface, borderColor: theme.border }]} onPress={() => onNavigate('orders')}>
+        <Receipt size={20} color={theme.textSecondary} />
+        <Text style={[styles.rowText, { color: theme.textSecondary }]}>Siparislerim</Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity style={[styles.rowCard, { backgroundColor: theme.surface, borderColor: theme.border }]} onPress={() => setAddressModalVisible(true)}>
+        <MapPin size={20} color={theme.textSecondary} />
+        <Text style={[styles.rowText, { color: theme.textSecondary }]}>Adreslerim ({user.addresses?.length || 0})</Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity
+        onPress={onLogout}
+        style={[
+          styles.rowCard,
+          styles.logoutRow,
+          { backgroundColor: theme.dangerBackground, borderColor: theme.dangerBorder }
+        ]}
+      >
+        <LogOut size={20} color={theme.danger} />
+        <Text style={[styles.rowText, { color: theme.danger }]}>Cikis Yap</Text>
+      </TouchableOpacity>
+
       <Modal visible={profileModalVisible} transparent animationType="fade">
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Profili Düzenle</Text>
-            
-            <TextInput 
-              placeholder="Ad Soyad" 
-              placeholderTextColor="#6B7280"
-              style={styles.input} 
-              value={editUser.name || ''} 
-              onChangeText={(t) => setEditUser({ ...editUser, name: t })} 
+        <View style={[styles.modalOverlay, { backgroundColor: theme.modalOverlay }]}>
+          <View style={[styles.modalContent, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+            <Text style={[styles.modalTitle, { color: theme.textPrimary }]}>Profili Duzenle</Text>
+
+            <TextInput
+              placeholder="Ad Soyad"
+              placeholderTextColor={theme.textMuted}
+              style={[styles.input, { backgroundColor: theme.inputBackground, color: theme.textPrimary }]}
+              value={editUser.name || ''}
+              onChangeText={(t) => setEditUser({ ...editUser, name: t })}
             />
-            <TextInput 
-              placeholder="E-posta" 
-              placeholderTextColor="#6B7280"
-              style={[styles.input, { backgroundColor: '#E5E7EB' }]} 
-              value={editUser.email || ''} 
+
+            <TextInput
+              placeholder="E-posta"
+              placeholderTextColor={theme.textMuted}
+              style={[styles.input, { backgroundColor: theme.surfaceAlt, color: theme.textMuted }]}
+              value={editUser.email || ''}
               editable={false}
             />
-            <TextInput 
-              placeholder="Telefon" 
-              placeholderTextColor="#6B7280"
-              style={styles.input} 
-              value={editUser.phone || ''} 
-              keyboardType="phone-pad" 
-              onChangeText={(t) => setEditUser({ ...editUser, phone: t })} 
+
+            <TextInput
+              placeholder="Telefon"
+              placeholderTextColor={theme.textMuted}
+              style={[styles.input, { backgroundColor: theme.inputBackground, color: theme.textPrimary }]}
+              value={editUser.phone || ''}
+              keyboardType="phone-pad"
+              onChangeText={(t) => setEditUser({ ...editUser, phone: t })}
             />
-            
-            <TouchableOpacity onPress={saveProfile} style={styles.primaryBtn}>
-              <Text style={styles.btnText}>Kaydet</Text>
+
+            <TouchableOpacity onPress={saveProfile} style={[styles.primaryBtn, { backgroundColor: theme.accent }]}>
+              <Text style={[styles.btnText, { color: theme.accentContrast }]}>Kaydet</Text>
             </TouchableOpacity>
-            <TouchableOpacity onPress={() => setProfileModalVisible(false)} style={{ marginTop: 15, alignSelf: 'center' }}>
-              <Text style={{color:'#6B7280'}}>Kapat</Text>
+
+            <TouchableOpacity onPress={() => setProfileModalVisible(false)} style={styles.closeButton}>
+              <Text style={{ color: theme.textMuted }}>Kapat</Text>
             </TouchableOpacity>
           </View>
         </View>
       </Modal>
 
-      {/* Adres Modalı */}
       <Modal visible={addressModalVisible} transparent animationType="fade">
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Adreslerim</Text>
-            <ScrollView style={{ maxHeight: 220, marginBottom: 15 }}>
-              {(user.addresses || []).length === 0 && <Text style={{ color: '#6B7280', fontStyle:'italic' }}>Kayıtlı adres yok.</Text>}
-              {(user.addresses || []).map((a) => (
-                <View key={a.id} style={styles.addressItem}>
-                  <TouchableOpacity style={{ flex: 1 }} onPress={() => setDefaultAddress(a.id)}>
-                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                      {a.isDefault ? <Check size={16} color="#EA580C" /> : <View style={styles.dot} />}
-                      <Text style={{ fontWeight: 'bold', marginLeft: 8, color: '#1F2937' }}>{a.title}</Text>
+        <View style={[styles.modalOverlay, { backgroundColor: theme.modalOverlay }]}>
+          <View style={[styles.modalContent, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+            <Text style={[styles.modalTitle, { color: theme.textPrimary }]}>Adreslerim</Text>
+
+            <ScrollView style={styles.addressScroll}>
+              {(user.addresses || []).length === 0 && (
+                <Text style={{ color: theme.textMuted, fontStyle: 'italic' }}>Kayitli adres yok.</Text>
+              )}
+
+              {(user.addresses || []).map((address) => (
+                <View
+                  key={address.id}
+                  style={[
+                    styles.addressItem,
+                    { backgroundColor: theme.surfaceAlt, borderColor: theme.border }
+                  ]}
+                >
+                  <TouchableOpacity style={styles.addressInfo} onPress={() => setDefaultAddress(address.id)}>
+                    <View style={styles.addressHead}>
+                      {address.isDefault ? (
+                        <Check size={16} color={theme.accent} />
+                      ) : (
+                        <View style={[styles.dot, { borderColor: theme.border }]} />
+                      )}
+                      <Text style={[styles.addressTitle, { color: theme.textPrimary }]}>{address.title}</Text>
                     </View>
-                    <Text style={{ color: '#6B7280', marginTop: 4, fontSize: 12 }}>{a.fullAddress}</Text>
+                    <Text style={[styles.addressText, { color: theme.textMuted }]}>{address.fullAddress}</Text>
                   </TouchableOpacity>
-                  <TouchableOpacity onPress={() => deleteAddress(a.id)} style={{padding: 5}}>
-                    <Trash2 color="#EF4444" size={18} />
+
+                  <TouchableOpacity onPress={() => deleteAddress(address.id)} style={styles.deleteAddressButton}>
+                    <Trash2 color={theme.danger} size={18} />
                   </TouchableOpacity>
                 </View>
               ))}
             </ScrollView>
-            
-            <View style={{borderTopWidth:1, borderColor:'#E5E7EB', paddingTop:15}}>
-              <Text style={{fontSize:12, fontWeight:'bold', marginBottom:5, color:'#374151'}}>Yeni Adres Ekle</Text>
-              <TextInput 
-                placeholder="Başlık (Ev, İş)" 
-                placeholderTextColor="#6B7280"
-                style={styles.input} 
-                value={addressForm.title} 
-                onChangeText={(t) => setAddressForm({ ...addressForm, title: t })} 
+
+            <View style={[styles.addAddressSection, { borderColor: theme.border }]}>
+              <Text style={[styles.addAddressTitle, { color: theme.textSecondary }]}>Yeni Adres Ekle</Text>
+
+              <TextInput
+                placeholder="Baslik (Ev, Is)"
+                placeholderTextColor={theme.textMuted}
+                style={[styles.input, { backgroundColor: theme.inputBackground, color: theme.textPrimary }]}
+                value={addressForm.title}
+                onChangeText={(t) => setAddressForm({ ...addressForm, title: t })}
               />
-              <TextInput 
-                placeholder="Açık Adres" 
-                placeholderTextColor="#6B7280"
-                style={styles.input} 
-                value={addressForm.fullAddress} 
-                onChangeText={(t) => setAddressForm({ ...addressForm, fullAddress: t })} 
+
+              <TextInput
+                placeholder="Acik Adres"
+                placeholderTextColor={theme.textMuted}
+                style={[styles.input, { backgroundColor: theme.inputBackground, color: theme.textPrimary }]}
+                value={addressForm.fullAddress}
+                onChangeText={(t) => setAddressForm({ ...addressForm, fullAddress: t })}
               />
-              <TouchableOpacity onPress={addAddress} style={styles.primaryBtn}>
-                <Text style={styles.btnText}>Adres Ekle</Text>
+
+              <TouchableOpacity onPress={addAddress} style={[styles.primaryBtn, { backgroundColor: theme.accent }]}>
+                <Text style={[styles.btnText, { color: theme.accentContrast }]}>Adres Ekle</Text>
               </TouchableOpacity>
             </View>
 
-            <TouchableOpacity onPress={() => setAddressModalVisible(false)} style={{ marginTop: 15, alignSelf: 'center' }}>
-              <Text style={{color:'#6B7280'}}>Kapat</Text>
+            <TouchableOpacity onPress={() => setAddressModalVisible(false)} style={styles.closeButton}>
+              <Text style={{ color: theme.textMuted }}>Kapat</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -211,19 +240,71 @@ export default function CustomerProfile({ user, onUpdateUser, onLogout, onNaviga
 
 const styles = StyleSheet.create({
   container: { flex: 1, padding: 20 },
-  card: { alignItems: 'center', marginBottom: 20, padding: 20, backgroundColor: 'white', borderRadius: 15, shadowColor:'#000', shadowOpacity:0.05, shadowRadius:5, elevation:2 },
-  avatar: { width: 80, height: 80, backgroundColor: '#EA580C', borderRadius: 40, alignItems: 'center', justifyContent: 'center', marginBottom: 10 },
-  name: { fontSize: 20, fontWeight: 'bold', color: '#1F2937' },
-  muted: { color: '#6B7280', marginTop: 2, fontSize: 14 },
-  rowCard: { flexDirection: 'row', backgroundColor: 'white', padding: 15, borderRadius: 12, marginBottom: 10, alignItems: 'center', shadowColor:'#000', shadowOpacity:0.03, shadowRadius:3, elevation:1 },
-  rowText: { marginLeft: 12, fontWeight: '600', color: '#374151', fontSize: 15 },
-  logoutRow: { backgroundColor: '#FEF2F2', borderWidth: 1, borderColor: '#FECACA' },
-  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', padding: 20 },
-  modalContent: { backgroundColor: 'white', padding: 24, borderRadius: 16, shadowColor: '#000', shadowOpacity: 0.25, shadowRadius: 10, elevation: 5 },
-  modalTitle: { fontWeight: 'bold', fontSize: 18, marginBottom: 15, color: '#1F2937', textAlign:'center' },
-  input: { backgroundColor: '#F3F4F6', padding: 12, borderRadius: 10, marginBottom: 12, color: '#1F2937', fontSize: 15 },
-  primaryBtn: { backgroundColor: '#EA580C', padding: 14, borderRadius: 10, alignItems: 'center', marginTop: 5 },
-  btnText: { color: 'white', fontWeight: 'bold', fontSize: 15 },
-  addressItem: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#F9FAFB', padding: 12, borderRadius: 10, marginBottom: 8, borderWidth:1, borderColor:'#F3F4F6' },
-  dot: { width: 16, height: 16, borderRadius: 8, borderWidth: 2, borderColor: '#D1D5DB' }
+  card: {
+    alignItems: 'center',
+    marginBottom: 20,
+    padding: 20,
+    borderRadius: 15,
+    shadowColor: '#000',
+    shadowOpacity: 0.05,
+    shadowRadius: 5,
+    elevation: 2,
+    borderWidth: 1
+  },
+  avatar: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 10
+  },
+  name: { fontSize: 20, fontWeight: 'bold' },
+  muted: { marginTop: 2, fontSize: 14 },
+  rowCard: {
+    flexDirection: 'row',
+    padding: 15,
+    borderRadius: 12,
+    marginBottom: 10,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOpacity: 0.03,
+    shadowRadius: 3,
+    elevation: 1,
+    borderWidth: 1
+  },
+  rowText: { marginLeft: 12, fontWeight: '600', fontSize: 15 },
+  logoutRow: {},
+  modalOverlay: { flex: 1, justifyContent: 'center', padding: 20 },
+  modalContent: {
+    padding: 24,
+    borderRadius: 16,
+    shadowColor: '#000',
+    shadowOpacity: 0.25,
+    shadowRadius: 10,
+    elevation: 5,
+    borderWidth: 1
+  },
+  modalTitle: { fontWeight: 'bold', fontSize: 18, marginBottom: 15, textAlign: 'center' },
+  input: { padding: 12, borderRadius: 10, marginBottom: 12, fontSize: 15 },
+  primaryBtn: { padding: 14, borderRadius: 10, alignItems: 'center', marginTop: 5 },
+  btnText: { fontWeight: 'bold', fontSize: 15 },
+  closeButton: { marginTop: 15, alignSelf: 'center' },
+  addressScroll: { maxHeight: 220, marginBottom: 15 },
+  addressItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 12,
+    borderRadius: 10,
+    marginBottom: 8,
+    borderWidth: 1
+  },
+  addressInfo: { flex: 1 },
+  addressHead: { flexDirection: 'row', alignItems: 'center' },
+  addressTitle: { fontWeight: 'bold', marginLeft: 8 },
+  addressText: { marginTop: 4, fontSize: 12 },
+  deleteAddressButton: { padding: 5 },
+  addAddressSection: { borderTopWidth: 1, paddingTop: 15 },
+  addAddressTitle: { fontSize: 12, fontWeight: 'bold', marginBottom: 5 },
+  dot: { width: 16, height: 16, borderRadius: 8, borderWidth: 2 }
 });

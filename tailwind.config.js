@@ -1,10 +1,15 @@
 // tailwind.config.js
 module.exports = {
-  content: ["./App.{js,jsx,ts,tsx}", "./components/**/*.{js,jsx,ts,tsx}"],
+  // DİKKAT: "./src/**/*.{js,jsx,ts,tsx}" kısmını ekledik.
+  content: [
+    "./App.{js,jsx,ts,tsx}", 
+    "./src/**/*.{js,jsx,ts,tsx}", 
+    "./components/**/*.{js,jsx,ts,tsx}"
+  ],
   theme: {
     extend: {
       colors: {
-        primary: '#f97316', // Senin kullandığın turuncu tonu
+        primary: '#f97316',
       }
     },
   },

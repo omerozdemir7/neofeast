@@ -3,16 +3,33 @@
     "name": "neofeast",
     "slug": "neofeast",
     "version": "1.0.0",
+    "userInterfaceStyle": "automatic",
     "platforms": [
       "ios",
       "android",
       "web"
     ],
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#ffffff"
+    },
     "entryPoint": "App.tsx",
     "extra": {
       "eas": {
         "projectId": "27c807f4-a9dd-4b51-bcbc-1bc401e24195"
       }
-    }
+    },
+    "android": {
+      "package": "com.cprookie.neofeast",
+      "googleServicesFile": "./google-services.json"
+    },
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/27c807f4-a9dd-4b51-bcbc-1bc401e24195"
+    },
+    "ios": {}
   }
 }

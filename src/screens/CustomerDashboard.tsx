@@ -1,6 +1,7 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { View, Text, TouchableOpacity, SafeAreaView, StyleSheet, Platform, Alert } from 'react-native';
-import { User } from 'lucide-react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Moon, Sun, User } from 'lucide-react-native';
 import { Restaurant, Order, UserType, CartItem, MenuItem } from '../types';
 import CustomerHome from './customer/CustomerHome';
 import CustomerCart from './customer/CustomerCart';
@@ -8,6 +9,7 @@ import CustomerOrders from './customer/CustomerOrders';
 import CustomerProfile from './customer/CustomerProfile';
 import RestaurantDetailModal from './customer/RestaurantDetailModal';
 import CustomerBottomBar from './customer/CustomerBottomBar';
+import { customerThemes, ThemeMode, themeStorageKey } from './customer/theme';
 
 type Tab = 'home' | 'search' | 'cart' | 'orders' | 'profile';
 
@@ -27,7 +29,29 @@ export default function CustomerDashboard({ user, restaurants, orders, onLogout,
   const [selectedRestaurant, setSelectedRestaurant] = useState<Restaurant | null>(null);
   const [restaurantModalVisible, setRestaurantModalVisible] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [themeMode, setThemeMode] = useState<ThemeMode>('light');
   const notify = (message: string, type: 'success' | 'error' | 'info' = 'info') => onNotify(message, type);
+  const theme = useMemo(() => customerThemes[themeMode], [themeMode]);
+
+  useEffect(() => {
+    let mounted = true;
+
+    const loadThemePreference = async () => {
+      try {
+        const savedTheme = await AsyncStorage.getItem(themeStorageKey);
+        if (mounted && (savedTheme === 'light' || savedTheme === 'dark')) {
+          setThemeMode(savedTheme);
+        }
+      } catch {
+        // Tema okunamazsa varsayilan tema kullanilir.
+      }
+    };
+
+    loadThemePreference();
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   const filteredRestaurants = useMemo(() => {
     const query = searchQuery.trim().toLowerCase();
@@ -77,13 +101,36 @@ export default function CustomerDashboard({ user, restaurants, orders, onLogout,
     });
   };
 
+  const toggleTheme = () => {
+    const nextTheme: ThemeMode = themeMode === 'light' ? 'dark' : 'light';
+    setThemeMode(nextTheme);
+    AsyncStorage.setItem(themeStorageKey, nextTheme).catch(() => {});
+    notify(nextTheme === 'dark' ? 'Karanlik mod acildi' : 'Aydinlik mod acildi', 'info');
+  };
+
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.topBar}>
-        <Text style={styles.brand}>NEOFEAST</Text>
-        <TouchableOpacity onPress={() => setActiveTab('profile')}>
-          <User color="#333" />
-        </TouchableOpacity>
+    <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
+      <View style={[styles.topBar, { backgroundColor: theme.surface, borderBottomColor: theme.border }]}>
+        <Text style={[styles.brand, { color: theme.textPrimary }]}>NEOFEAST</Text>
+        <View style={styles.actions}>
+          <TouchableOpacity
+            onPress={toggleTheme}
+            style={[styles.iconButton, { backgroundColor: theme.inputBackground }]}
+            accessibilityRole="button"
+            accessibilityLabel={themeMode === 'light' ? 'Karanlik moda gec' : 'Aydinlik moda gec'}
+          >
+            {themeMode === 'light' ? <Moon color={theme.textPrimary} size={20} /> : <Sun color={theme.textPrimary} size={20} />}
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            onPress={() => setActiveTab('profile')}
+            style={[styles.iconButton, styles.profileButton, { backgroundColor: theme.inputBackground }]}
+            accessibilityRole="button"
+            accessibilityLabel="Profil sekmesine git"
+          >
+            <User color={theme.textPrimary} size={20} />
+          </TouchableOpacity>
+        </View>
       </View>
 
       {activeTab === 'home' && (
@@ -93,6 +140,7 @@ export default function CustomerDashboard({ user, restaurants, orders, onLogout,
           searchQuery={searchQuery}
           onSearchChange={setSearchQuery}
           onSelectRestaurant={handleSelectRestaurant}
+          theme={theme}
         />
       )}
       {activeTab === 'search' && (
@@ -103,6 +151,7 @@ export default function CustomerDashboard({ user, restaurants, orders, onLogout,
           onSearchChange={setSearchQuery}
           onSelectRestaurant={handleSelectRestaurant}
           autoFocus
+          theme={theme}
         />
       )}
       {activeTab === 'cart' && (
@@ -114,9 +163,10 @@ export default function CustomerDashboard({ user, restaurants, orders, onLogout,
           refreshData={refreshData}
           onNavigate={(tab) => setActiveTab(tab)}
           onNotify={notify}
+          theme={theme}
         />
       )}
-      {activeTab === 'orders' && <CustomerOrders user={user} orders={orders} />}
+      {activeTab === 'orders' && <CustomerOrders user={user} orders={orders} theme={theme} />}
       {activeTab === 'profile' && (
         <CustomerProfile
           user={user}
@@ -124,6 +174,7 @@ export default function CustomerDashboard({ user, restaurants, orders, onLogout,
           onLogout={onLogout}
           onNavigate={(tab) => setActiveTab(tab)}
           onNotify={notify}
+          theme={theme}
         />
       )}
 
@@ -131,6 +182,7 @@ export default function CustomerDashboard({ user, restaurants, orders, onLogout,
         activeTab={activeTab}
         onTabChange={(tab) => setActiveTab(tab)}
         cartCount={cart.reduce((acc, item) => acc + item.quantity, 0)}
+        theme={theme}
       />
 
       <RestaurantDetailModal
@@ -138,13 +190,24 @@ export default function CustomerDashboard({ user, restaurants, orders, onLogout,
         restaurant={selectedRestaurant}
         onClose={() => setRestaurantModalVisible(false)}
         onAddToCart={handleAddToCart}
+        theme={theme}
       />
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F9FAFB', paddingTop: Platform.OS === 'android' ? 30 : 0 },
-  topBar: { flexDirection: 'row', justifyContent: 'space-between', padding: 20, backgroundColor: 'white', alignItems: 'center' },
-  brand: { fontSize: 24, fontWeight: '900', color: '#1F2937' }
+  container: { flex: 1, paddingTop: Platform.OS === 'android' ? 30 : 0 },
+  topBar: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    alignItems: 'center',
+    borderBottomWidth: 1
+  },
+  brand: { fontSize: 24, fontWeight: '900' },
+  actions: { flexDirection: 'row', alignItems: 'center' },
+  iconButton: { width: 38, height: 38, borderRadius: 19, alignItems: 'center', justifyContent: 'center' },
+  profileButton: { marginLeft: 10 }
 });

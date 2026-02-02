@@ -1,49 +1,55 @@
 import React from 'react';
 import { View, Text, ScrollView, StyleSheet } from 'react-native';
 import { Order, UserType } from '../../types';
+import { CustomerTheme } from './theme';
 
 interface Props {
   user: UserType;
   orders: Order[];
+  theme: CustomerTheme;
 }
 
-export default function CustomerOrders({ user, orders }: Props) {
+export default function CustomerOrders({ user, orders, theme }: Props) {
   const myOrders = orders
-    .filter((o) => o.customerId === user._id)
+    .filter((order) => order.customerId === user._id)
     .slice()
     .reverse();
 
   return (
-    <ScrollView contentContainerStyle={{ padding: 20 }}>
-      <Text style={styles.title}>Siparislerim</Text>
+    <ScrollView contentContainerStyle={styles.container}>
+      <Text style={[styles.title, { color: theme.textPrimary }]}>Siparislerim</Text>
+
       {myOrders.length === 0 && (
-        <Text style={{ color: 'gray', textAlign: 'center', marginTop: 20 }}>Henuz siparis yok.</Text>
+        <Text style={[styles.emptyText, { color: theme.textMuted }]}>Henuz siparis yok.</Text>
       )}
-      {myOrders.map((o) => (
-        <View key={o.id} style={styles.card}>
+
+      {myOrders.map((order) => (
+        <View key={order.id} style={[styles.card, { backgroundColor: theme.surface, borderColor: theme.border }]}>
           <View style={styles.cardRow}>
             <View>
-              <Text style={{ fontWeight: 'bold' }}>{o.restaurantName}</Text>
-              <Text style={{ color: o.status === 'Teslim Edildi' ? 'green' : 'orange' }}>{o.status}</Text>
-              <Text style={{ fontSize: 10, color: 'gray' }}>{o.date}</Text>
+              <Text style={[styles.restaurantName, { color: theme.textPrimary }]}>{order.restaurantName}</Text>
+              <Text style={{ color: order.status === 'Teslim Edildi' ? theme.success : theme.warning }}>{order.status}</Text>
+              <Text style={[styles.dateText, { color: theme.textMuted }]}>{order.date}</Text>
             </View>
-            <Text style={{ fontWeight: 'bold' }}>
-              {(o.finalTotal ?? o.total).toFixed(2)} TL
+            <Text style={[styles.totalText, { color: theme.textPrimary }]}>
+              {(order.finalTotal ?? order.total).toFixed(2)} TL
             </Text>
           </View>
-          {o.items?.length > 0 && (
-            <View style={styles.itemsBlock}>
-              {o.items.map((it, idx) => {
-                const qty = it.quantity ?? 1;
+
+          {order.items?.length > 0 && (
+            <View style={[styles.itemsBlock, { borderTopColor: theme.border }]}>
+              {order.items.map((item, idx) => {
+                const qty = item.quantity ?? 1;
                 return (
-                  <Text key={`${o.id}-${idx}`} style={styles.itemText}>
-                    {qty}x {it.name}
+                  <Text key={`${order.id}-${idx}`} style={[styles.itemText, { color: theme.textSecondary }]}>
+                    {qty}x {item.name}
                   </Text>
                 );
               })}
             </View>
           )}
-          {o.note ? <Text style={styles.noteText}>Not: {o.note}</Text> : null}
+
+          {order.note ? <Text style={[styles.noteText, { color: theme.textMuted }]}>Not: {order.note}</Text> : null}
         </View>
       ))}
     </ScrollView>
@@ -51,10 +57,21 @@ export default function CustomerOrders({ user, orders }: Props) {
 }
 
 const styles = StyleSheet.create({
+  container: { padding: 20 },
   title: { fontSize: 20, fontWeight: 'bold', marginBottom: 15 },
-  card: { backgroundColor: 'white', padding: 15, borderRadius: 10, marginBottom: 12, elevation: 1 },
+  emptyText: { textAlign: 'center', marginTop: 20 },
+  card: {
+    padding: 15,
+    borderRadius: 10,
+    marginBottom: 12,
+    elevation: 1,
+    borderWidth: 1
+  },
   cardRow: { flexDirection: 'row', justifyContent: 'space-between' },
-  itemsBlock: { marginTop: 8, borderTopWidth: 1, borderTopColor: '#F3F4F6', paddingTop: 8 },
-  itemText: { color: '#4B5563', fontSize: 12 },
-  noteText: { marginTop: 6, color: '#6B7280', fontSize: 12 }
+  restaurantName: { fontWeight: 'bold' },
+  dateText: { fontSize: 10 },
+  totalText: { fontWeight: 'bold' },
+  itemsBlock: { marginTop: 8, borderTopWidth: 1, paddingTop: 8 },
+  itemText: { fontSize: 12 },
+  noteText: { marginTop: 6, fontSize: 12 }
 });
