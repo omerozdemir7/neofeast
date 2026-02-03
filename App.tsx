@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { UserType, Restaurant, Order } from './src/types';
+import { UserType, Restaurant, Order, Promotion } from './src/types';
 // API_URL artık kullanılmıyor, silebilirsin.
 import { auth, db } from './src/firebaseConfig'; // Firebase import
 import { collection, onSnapshot, doc, getDoc } from 'firebase/firestore'; 
@@ -18,6 +18,7 @@ export default function App() {
   const [currentUser, setCurrentUser] = useState<UserType | null>(null);
   const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
+  const [promotions, setPromotions] = useState<Promotion[]>([]);
   const [toast, setToast] = useState<{ message: string; type: ToastType; visible: boolean }>({
     message: '',
     type: 'info',
@@ -77,9 +78,44 @@ export default function App() {
       setOrders(list);
     });
 
+    const unsubPromo = onSnapshot(collection(db, "promos"), (snapshot) => {
+      const list = snapshot.docs
+        .map((promoDoc) => {
+          const data = promoDoc.data() as Partial<Promotion> & {
+            startsAt?: { toMillis?: () => number };
+            endsAt?: { toMillis?: () => number };
+          };
+
+          return {
+            id: promoDoc.id,
+            title: data.title || "Kampanya",
+            code: (data.code || promoDoc.id).toUpperCase(),
+            imageUrl: data.imageUrl || "https://images.unsplash.com/photo-1556740749-887f6717d7e4?w=1200",
+            type: data.type === "amount" ? "amount" : "percent",
+            value: typeof data.value === "number" ? data.value : 0,
+            active: data.active !== false,
+            minOrderTotal: typeof data.minOrderTotal === "number" ? data.minOrderTotal : 0,
+            maxDiscountAmount: typeof data.maxDiscountAmount === "number" ? data.maxDiscountAmount : undefined,
+            targetUserIds: Array.isArray(data.targetUserIds) ? data.targetUserIds.filter((id): id is string => typeof id === "string") : [],
+            startsAt: data.startsAt?.toMillis?.(),
+            endsAt: data.endsAt?.toMillis?.(),
+            createdAt: typeof data.createdAt === "string" ? data.createdAt : undefined
+          } as Promotion;
+        })
+        .filter((promo) => promo.value > 0)
+        .sort((a, b) => {
+          const aTime = Date.parse(a.createdAt || '') || 0;
+          const bTime = Date.parse(b.createdAt || '') || 0;
+          return bTime - aTime;
+        });
+
+      setPromotions(list);
+    });
+
     return () => {
       unsubRest();
       unsubOrder();
+      unsubPromo();
     };
   }, []);
 
@@ -88,7 +124,15 @@ export default function App() {
   if (!currentUser) {
     content = <AuthScreen onLogin={(user) => setCurrentUser(user)} />;
   } else if (currentUser.role === 'admin') {
-    content = <AdminPanel restaurants={restaurants} onLogout={() => auth.signOut()} refreshData={() => {}} />;
+    content = (
+      <AdminPanel
+        restaurants={restaurants}
+        orders={orders}
+        promotions={promotions}
+        onLogout={() => auth.signOut()}
+        refreshData={() => {}}
+      />
+    );
   } else if (currentUser.role === 'seller') {
     content = (
       <SellerPanel
@@ -105,6 +149,7 @@ export default function App() {
         user={currentUser}
         restaurants={restaurants}
         orders={orders}
+        promotions={promotions}
         onLogout={() => auth.signOut()}
         refreshData={() => {}} // Firebase otomatik günceller, buna gerek yok
         onUpdateUser={(nextUser) => setCurrentUser(nextUser)}

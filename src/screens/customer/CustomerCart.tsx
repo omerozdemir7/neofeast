@@ -2,8 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, TextInput, StyleSheet } from 'react-native';
 import { CreditCard, Banknote, Trash2 } from 'lucide-react-native';
 import { CartItem, UserType, Restaurant } from '../../types';
-import { API_URL } from '../../utils/constants';
-import { addDoc, collection } from 'firebase/firestore';
+import { addDoc, collection, doc, getDoc } from 'firebase/firestore';
 import { db } from '../../firebaseConfig';
 import { CustomerTheme } from './theme';
 
@@ -18,7 +17,26 @@ interface Props {
   theme: CustomerTheme;
 }
 
-type Discount = { code: string; type: 'percent' | 'amount'; value: number } | null;
+type Discount =
+  | {
+      code: string;
+      type: 'percent' | 'amount';
+      value: number;
+      minOrderTotal?: number;
+      maxDiscountAmount?: number;
+    }
+  | null;
+
+type PromoDoc = {
+  type?: 'percent' | 'amount';
+  value?: number;
+  active?: boolean;
+  minOrderTotal?: number;
+  maxDiscountAmount?: number;
+  targetUserIds?: string[];
+  startsAt?: { toMillis?: () => number };
+  endsAt?: { toMillis?: () => number };
+};
 
 export default function CustomerCart({
   user,
@@ -38,34 +56,85 @@ export default function CustomerCart({
 
   const subTotal = cart.reduce((a, b) => a + b.item.price * b.quantity, 0);
   let discountAmount = 0;
-  if (appliedDiscount) {
-    discountAmount =
-      appliedDiscount.type === 'percent'
-        ? (subTotal * appliedDiscount.value) / 100
-        : appliedDiscount.value;
+  if (appliedDiscount && subTotal >= (appliedDiscount.minOrderTotal || 0)) {
+    discountAmount = appliedDiscount.type === 'percent' ? (subTotal * appliedDiscount.value) / 100 : appliedDiscount.value;
+    if (appliedDiscount.maxDiscountAmount) {
+      discountAmount = Math.min(discountAmount, appliedDiscount.maxDiscountAmount);
+    }
   }
   discountAmount = Math.min(discountAmount, subTotal);
   const finalTotal = subTotal - discountAmount;
 
   const applyPromoCode = async () => {
-    if (!promoCode) {
+    const code = promoCode.trim().toUpperCase();
+    if (!code) {
       notify('Indirim kodu giriniz.', 'error');
       return;
     }
+
     try {
-      const res = await fetch(`${API_URL}/promos/validate`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ code: promoCode })
-      });
-      const data = await res.json();
-      if (data.valid) {
-        setAppliedDiscount({ code: promoCode, type: data.type, value: data.value });
-        notify('Indirim kodu uygulandi.', 'success');
-      } else {
+      const promoRef = doc(db, 'promos', code);
+      const promoSnap = await getDoc(promoRef);
+
+      if (!promoSnap.exists()) {
         setAppliedDiscount(null);
         notify('Gecersiz indirim kodu.', 'error');
+        return;
       }
+
+      const data = promoSnap.data() as PromoDoc;
+      if (!data.active || !data.type || typeof data.value !== 'number' || data.value <= 0) {
+        setAppliedDiscount(null);
+        notify('Bu promosyon aktif degil.', 'error');
+        return;
+      }
+
+      const targetUserIds = Array.isArray(data.targetUserIds)
+        ? data.targetUserIds.filter((id): id is string => typeof id === 'string')
+        : [];
+
+      if (targetUserIds.length > 0 && !targetUserIds.includes(user._id)) {
+        setAppliedDiscount(null);
+        notify('Bu promosyon senin hesabina tanimli degil.', 'error');
+        return;
+      }
+
+      if (data.type === 'percent' && data.value > 100) {
+        setAppliedDiscount(null);
+        notify('Promosyon degeri hatali.', 'error');
+        return;
+      }
+
+      const now = Date.now();
+      const startsAt = data.startsAt?.toMillis?.();
+      const endsAt = data.endsAt?.toMillis?.();
+      if (startsAt && now < startsAt) {
+        setAppliedDiscount(null);
+        notify('Bu promosyon henuz baslamadi.', 'error');
+        return;
+      }
+      if (endsAt && now > endsAt) {
+        setAppliedDiscount(null);
+        notify('Bu promosyonun suresi doldu.', 'error');
+        return;
+      }
+
+      const minOrderTotal = Math.max(0, Number(data.minOrderTotal || 0));
+      if (subTotal < minOrderTotal) {
+        setAppliedDiscount(null);
+        notify(`Bu kod icin minimum tutar ${minOrderTotal.toFixed(2)} TL.`, 'error');
+        return;
+      }
+
+      setPromoCode(code);
+      setAppliedDiscount({
+        code,
+        type: data.type,
+        value: data.value,
+        minOrderTotal,
+        maxDiscountAmount: data.maxDiscountAmount
+      });
+      notify('Indirim kodu uygulandi.', 'success');
     } catch {
       notify('Indirim kodu kontrol edilemedi.', 'error');
     }
@@ -108,6 +177,9 @@ export default function CustomerCart({
       total: subTotal,
       discount: discountAmount,
       finalTotal,
+      promoCode: appliedDiscount?.code || null,
+      promoType: appliedDiscount?.type || null,
+      promoValue: appliedDiscount?.value || null,
       address,
       note: orderNote,
       status: 'Beklemede',

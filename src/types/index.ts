@@ -51,6 +51,22 @@ export interface Restaurant {
   ownerId?: string;
 }
 
+export interface Promotion {
+  id: string;
+  title: string;
+  code: string;
+  imageUrl: string;
+  type: 'percent' | 'amount';
+  value: number;
+  active: boolean;
+  minOrderTotal?: number;
+  maxDiscountAmount?: number;
+  targetUserIds?: string[];
+  startsAt?: number;
+  endsAt?: number;
+  createdAt?: string;
+}
+
 export interface Order {
   id: string;
   createdAt?: number;
@@ -63,6 +79,9 @@ export interface Order {
   total: number;
   discount?: number;
   finalTotal?: number;
+  promoCode?: string | null;
+  promoType?: 'percent' | 'amount' | null;
+  promoValue?: number | null;
   address?: string;
   note?: string;
   status: string;

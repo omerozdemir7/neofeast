@@ -24,3 +24,20 @@ dist-ssr
 *.sw?
 .env
 .env.local
+
+# Firebase client configs
+
+
+# Mobile signing keys / certs
+*.jks
+*.keystore
+*.p12
+*.pem
+*.mobileprovision
+
+# Expo local state
+.expo/
+
+# Ignore all env variants but allow template
+.env.*
+!.env.example

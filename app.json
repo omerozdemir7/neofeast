@@ -30,6 +30,7 @@
     "updates": {
       "url": "https://u.expo.dev/27c807f4-a9dd-4b51-bcbc-1bc401e24195"
     },
-    "ios": {}
+    "ios": {},
+    "owner": "cprookie"
   }
 }

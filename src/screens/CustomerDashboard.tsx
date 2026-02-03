@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { View, Text, TouchableOpacity, SafeAreaView, StyleSheet, Platform, Alert } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Moon, Sun, User } from 'lucide-react-native';
-import { Restaurant, Order, UserType, CartItem, MenuItem } from '../types';
+import { Restaurant, Order, UserType, CartItem, MenuItem, Promotion } from '../types';
 import CustomerHome from './customer/CustomerHome';
 import CustomerCart from './customer/CustomerCart';
 import CustomerOrders from './customer/CustomerOrders';
@@ -17,13 +17,23 @@ interface Props {
   user: UserType;
   restaurants: Restaurant[];
   orders: Order[];
+  promotions: Promotion[];
   onLogout: () => void;
   refreshData: () => void;
   onUpdateUser: (user: UserType) => void;
   onNotify: (message: string, type?: 'success' | 'error' | 'info') => void;
 }
 
-export default function CustomerDashboard({ user, restaurants, orders, onLogout, refreshData, onUpdateUser, onNotify }: Props) {
+export default function CustomerDashboard({
+  user,
+  restaurants,
+  orders,
+  promotions,
+  onLogout,
+  refreshData,
+  onUpdateUser,
+  onNotify
+}: Props) {
   const [activeTab, setActiveTab] = useState<Tab>('home');
   const [cart, setCart] = useState<CartItem[]>([]);
   const [selectedRestaurant, setSelectedRestaurant] = useState<Restaurant | null>(null);
@@ -62,6 +72,17 @@ export default function CustomerDashboard({ user, restaurants, orders, onLogout,
       return name.includes(query) || category.includes(query);
     });
   }, [restaurants, searchQuery]);
+
+  const activePromotions = useMemo(() => {
+    const now = Date.now();
+    return promotions.filter((promo) => {
+      if (!promo.active) return false;
+      if (promo.startsAt && now < promo.startsAt) return false;
+      if (promo.endsAt && now > promo.endsAt) return false;
+      if ((promo.targetUserIds?.length || 0) > 0 && !promo.targetUserIds?.includes(user._id)) return false;
+      return true;
+    });
+  }, [promotions, user._id]);
 
   const handleSelectRestaurant = (restaurant: Restaurant) => {
     setSelectedRestaurant(restaurant);
@@ -137,9 +158,11 @@ export default function CustomerDashboard({ user, restaurants, orders, onLogout,
         <CustomerHome
           title="Restaurants"
           restaurants={filteredRestaurants}
+          promotions={activePromotions}
           searchQuery={searchQuery}
           onSearchChange={setSearchQuery}
           onSelectRestaurant={handleSelectRestaurant}
+          showCampaigns
           theme={theme}
         />
       )}
@@ -147,10 +170,12 @@ export default function CustomerDashboard({ user, restaurants, orders, onLogout,
         <CustomerHome
           title="Ara"
           restaurants={filteredRestaurants}
+          promotions={activePromotions}
           searchQuery={searchQuery}
           onSearchChange={setSearchQuery}
           onSelectRestaurant={handleSelectRestaurant}
           autoFocus
+          showCampaigns={false}
           theme={theme}
         />
       )}
