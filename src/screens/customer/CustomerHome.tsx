@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, ScrollView, Image, TouchableOpacity, TextInput, StyleSheet } from 'react-native';
+import { View, Text, ScrollView, Image, TouchableOpacity, TextInput, Keyboard, StyleSheet, TouchableWithoutFeedback } from 'react-native';
 import { Search } from 'lucide-react-native';
 import { Promotion, Restaurant } from '../../types';
 import { CustomerTheme } from './theme';
@@ -28,65 +28,67 @@ export default function CustomerHome({
   theme
 }: Props) {
   return (
-    <ScrollView contentContainerStyle={styles.container}>
-      <Text style={[styles.title, { color: theme.textPrimary }]}>{title}</Text>
+    <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
+      <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag">
+        <Text style={[styles.title, { color: theme.textPrimary }]}>{title}</Text>
 
-      <View style={[styles.searchRow, { backgroundColor: theme.inputBackground }]}>
-        <Search color={theme.textMuted} size={18} />
-        <TextInput
-          placeholder="Restoran veya kategori ara"
-          placeholderTextColor={theme.textMuted}
-          style={[styles.searchInput, { color: theme.textPrimary }]}
-          value={searchQuery}
-          onChangeText={onSearchChange}
-          autoFocus={autoFocus}
-        />
-      </View>
+        <View style={[styles.searchRow, { backgroundColor: theme.inputBackground }]}>
+          <Search color={theme.textMuted} size={18} />
+          <TextInput
+            placeholder="Restoran veya kategori ara"
+            placeholderTextColor={theme.textMuted}
+            style={[styles.searchInput, { color: theme.textPrimary }]}
+            value={searchQuery}
+            onChangeText={onSearchChange}
+            autoFocus={autoFocus}
+          />
+        </View>
 
-      {showCampaigns && promotions.length > 0 && (
-        <View style={styles.campaignSection}>
-          <Text style={[styles.campaignTitle, { color: theme.textPrimary }]}>Kampanyalar</Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-            {promotions.map((promo) => (
-              <View key={promo.id} style={[styles.campaignCard, { backgroundColor: theme.surface, borderColor: theme.border }]}>
-                <Image source={{ uri: promo.imageUrl }} style={styles.campaignImage} />
-                <View style={styles.campaignOverlay}>
-                  <Text style={styles.campaignName} numberOfLines={1}>
-                    {promo.title}
-                  </Text>
-                  <Text style={styles.campaignDiscount}>
-                    {promo.type === 'percent' ? `%${promo.value} indirim` : `${promo.value} TL indirim`}
-                  </Text>
-                  <View style={styles.codeBadge}>
-                    <Text style={styles.codeBadgeText}>Kod: {promo.code}</Text>
+        {showCampaigns && promotions.length > 0 && (
+          <View style={styles.campaignSection}>
+            <Text style={[styles.campaignTitle, { color: theme.textPrimary }]}>Kampanyalar</Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+              {promotions.map((promo) => (
+                <View key={promo.id} style={[styles.campaignCard, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+                  <Image source={{ uri: promo.imageUrl }} style={styles.campaignImage} />
+                  <View style={styles.campaignOverlay}>
+                    <Text style={styles.campaignName} numberOfLines={1}>
+                      {promo.title}
+                    </Text>
+                    <Text style={styles.campaignDiscount}>
+                      {promo.type === 'percent' ? `%${promo.value} indirim` : `${promo.value} TL indirim`}
+                    </Text>
+                    <View style={styles.codeBadge}>
+                      <Text style={styles.codeBadgeText}>Kod: {promo.code}</Text>
+                    </View>
                   </View>
                 </View>
-              </View>
-            ))}
-          </ScrollView>
-        </View>
-      )}
-
-      {restaurants.length === 0 && (
-        <Text style={[styles.emptyText, { color: theme.textMuted }]}>Restoran bulunamadi.</Text>
-      )}
-
-      {restaurants.map((restaurant) => (
-        <TouchableOpacity
-          key={restaurant._id || restaurant.id}
-          style={[styles.card, { backgroundColor: theme.surface, borderColor: theme.border }]}
-          onPress={() => onSelectRestaurant(restaurant)}
-        >
-          <Image source={{ uri: restaurant.image }} style={styles.cardImage} />
-          <View style={styles.cardBody}>
-            <Text style={[styles.cardTitle, { color: theme.textPrimary }]}>{restaurant.name}</Text>
-            <Text style={[styles.cardSub, { color: theme.textSecondary }]}>
-              {restaurant.category} - {restaurant.rating} - {restaurant.deliveryTime}
-            </Text>
+              ))}
+            </ScrollView>
           </View>
-        </TouchableOpacity>
-      ))}
-    </ScrollView>
+        )}
+
+        {restaurants.length === 0 && (
+          <Text style={[styles.emptyText, { color: theme.textMuted }]}>Restoran bulunamadi.</Text>
+        )}
+
+        {restaurants.map((restaurant) => (
+          <TouchableOpacity
+            key={restaurant._id || restaurant.id}
+            style={[styles.card, { backgroundColor: theme.surface, borderColor: theme.border }]}
+            onPress={() => onSelectRestaurant(restaurant)}
+          >
+            <Image source={{ uri: restaurant.image }} style={styles.cardImage} />
+            <View style={styles.cardBody}>
+              <Text style={[styles.cardTitle, { color: theme.textPrimary }]}>{restaurant.name}</Text>
+              <Text style={[styles.cardSub, { color: theme.textSecondary }]}>
+                {restaurant.category} - {restaurant.rating} - {restaurant.deliveryTime}
+              </Text>
+            </View>
+          </TouchableOpacity>
+        ))}
+      </ScrollView>
+    </TouchableWithoutFeedback>
   );
 }
 

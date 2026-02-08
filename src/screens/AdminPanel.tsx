@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, TextInput, StyleSheet, SafeAreaView, Alert, Modal, Image } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, TextInput, StyleSheet, Alert, Modal, Image, Keyboard, TouchableWithoutFeedback } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { LogOut, Trash2, Plus, TicketPercent, Pencil } from 'lucide-react-native';
 import { Order, Promotion, Restaurant } from '../types';
 import { db } from '../firebaseConfig';
@@ -228,15 +229,16 @@ export default function AdminPanel({ restaurants, orders, promotions, onLogout }
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.title}>Admin Paneli</Text>
-        <TouchableOpacity onPress={onLogout}>
-          <LogOut color="white" />
-        </TouchableOpacity>
-      </View>
+    <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
+      <SafeAreaView style={styles.container}>
+        <View style={styles.header}>
+          <Text style={styles.title}>Admin Paneli</Text>
+          <TouchableOpacity onPress={onLogout}>
+            <LogOut color="white" />
+          </TouchableOpacity>
+        </View>
 
-      <ScrollView contentContainerStyle={styles.content}>
+        <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>Restoranlar ({restaurants.length})</Text>
           <TouchableOpacity onPress={openCreateRestaurantModal} style={styles.addBtn}>
@@ -297,56 +299,62 @@ export default function AdminPanel({ restaurants, orders, promotions, onLogout }
             </View>
           );
         })}
-      </ScrollView>
+        </ScrollView>
 
       <Modal visible={restaurantModalVisible} transparent animationType="slide">
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>{editingRestaurantId ? 'Restoran Duzenle' : 'Yeni Restoran Ekle'}</Text>
-            <TextInput
-              placeholder="Restoran Adi"
-              style={styles.input}
-              value={newRest.name}
-              onChangeText={(name) => setNewRest((prev) => ({ ...prev, name }))}
-            />
-            <TextInput
-              placeholder="Kategori (Orn: Burger)"
-              style={styles.input}
-              value={newRest.category}
-              onChangeText={(category) => setNewRest((prev) => ({ ...prev, category }))}
-            />
-            <TextInput
-              placeholder="Teslimat (Orn: 30 dk)"
-              style={styles.input}
-              value={newRest.deliveryTime}
-              onChangeText={(deliveryTime) => setNewRest((prev) => ({ ...prev, deliveryTime }))}
-            />
-            <TextInput
-              placeholder="Resim URL"
-              style={styles.input}
-              value={newRest.image}
-              onChangeText={(image) => setNewRest((prev) => ({ ...prev, image }))}
-            />
+        <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
+          <View style={styles.modalOverlay}>
+            <TouchableWithoutFeedback onPress={() => {}}>
+              <View style={styles.modalContent}>
+                <Text style={styles.modalTitle}>{editingRestaurantId ? 'Restoran Duzenle' : 'Yeni Restoran Ekle'}</Text>
+                <TextInput
+                  placeholder="Restoran Adi"
+                  style={styles.input}
+                  value={newRest.name}
+                  onChangeText={(name) => setNewRest((prev) => ({ ...prev, name }))}
+                />
+                <TextInput
+                  placeholder="Kategori (Orn: Burger)"
+                  style={styles.input}
+                  value={newRest.category}
+                  onChangeText={(category) => setNewRest((prev) => ({ ...prev, category }))}
+                />
+                <TextInput
+                  placeholder="Teslimat (Orn: 30 dk)"
+                  style={styles.input}
+                  value={newRest.deliveryTime}
+                  onChangeText={(deliveryTime) => setNewRest((prev) => ({ ...prev, deliveryTime }))}
+                />
+                <TextInput
+                  placeholder="Resim URL"
+                  style={styles.input}
+                  value={newRest.image}
+                  onChangeText={(image) => setNewRest((prev) => ({ ...prev, image }))}
+                />
 
-            <TouchableOpacity onPress={saveRestaurant} style={styles.saveBtn}>
-              <Text style={styles.saveBtnText}>{editingRestaurantId ? 'Guncelle' : 'Kaydet'}</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              onPress={() => {
-                setRestaurantModalVisible(false);
-                setEditingRestaurantId(null);
-              }}
-              style={styles.cancelBtn}
-            >
-              <Text style={styles.cancelBtnText}>Iptal</Text>
-            </TouchableOpacity>
+                <TouchableOpacity onPress={saveRestaurant} style={styles.saveBtn}>
+                  <Text style={styles.saveBtnText}>{editingRestaurantId ? 'Guncelle' : 'Kaydet'}</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={() => {
+                    setRestaurantModalVisible(false);
+                    setEditingRestaurantId(null);
+                  }}
+                  style={styles.cancelBtn}
+                >
+                  <Text style={styles.cancelBtnText}>Iptal</Text>
+                </TouchableOpacity>
+              </View>
+            </TouchableWithoutFeedback>
           </View>
-        </View>
+        </TouchableWithoutFeedback>
       </Modal>
 
       <Modal visible={promoModalVisible} transparent animationType="slide">
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
+        <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
+          <View style={styles.modalOverlay}>
+            <TouchableWithoutFeedback onPress={() => {}}>
+              <View style={styles.modalContent}>
             <Text style={styles.modalTitle}>{promoMode === 'special' ? 'Ozel Promosyon' : 'Yeni Promosyon'}</Text>
 
             <TextInput
@@ -431,7 +439,7 @@ export default function AdminPanel({ restaurants, orders, promotions, onLogout }
                       </TouchableOpacity>
                     </View>
 
-                    <ScrollView style={styles.customerList} nestedScrollEnabled>
+                    <ScrollView style={styles.customerList} nestedScrollEnabled keyboardShouldPersistTaps="handled">
                       {topCustomers.map((customer) => {
                         const selected = selectedTargetUserIds.includes(customer.id);
                         return (
@@ -467,10 +475,13 @@ export default function AdminPanel({ restaurants, orders, promotions, onLogout }
             >
               <Text style={styles.cancelBtnText}>Iptal</Text>
             </TouchableOpacity>
+              </View>
+            </TouchableWithoutFeedback>
           </View>
-        </View>
+        </TouchableWithoutFeedback>
       </Modal>
-    </SafeAreaView>
+      </SafeAreaView>
+    </TouchableWithoutFeedback>
   );
 }
 

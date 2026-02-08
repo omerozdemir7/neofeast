@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, TextInput, StyleSheet } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, TextInput, StyleSheet, Keyboard, TouchableWithoutFeedback } from 'react-native';
 import { CreditCard, Banknote, Trash2 } from 'lucide-react-native';
 import { CartItem, UserType, Restaurant } from '../../types';
 import { addDoc, collection, doc, getDoc } from 'firebase/firestore';
@@ -206,116 +206,118 @@ export default function CustomerCart({
   const isCardActive = paymentMethod === 'Kart';
 
   return (
-    <View style={[styles.container, { backgroundColor: theme.background }]}>
-      <Text style={[styles.title, { color: theme.textPrimary }]}>Sepetim</Text>
+    <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
+      <View style={[styles.container, { backgroundColor: theme.background }]}>
+        <Text style={[styles.title, { color: theme.textPrimary }]}>Sepetim</Text>
 
-      <ScrollView>
-        {cart.length === 0 && (
-          <Text style={[styles.emptyText, { color: theme.textMuted }]}>Sepet bos.</Text>
-        )}
+        <ScrollView keyboardShouldPersistTaps="handled">
+          {cart.length === 0 && (
+            <Text style={[styles.emptyText, { color: theme.textMuted }]}>Sepet bos.</Text>
+          )}
 
-        {cart.map((c, i) => (
-          <View key={`${c.item.id}-${i}`} style={[styles.rowCard, { backgroundColor: theme.surface, borderColor: theme.border }]}>
-            <View style={styles.itemInfo}>
-              <Text style={[styles.itemName, { color: theme.textPrimary }]}>{c.item.name}</Text>
-              <Text style={[styles.itemPrice, { color: theme.textMuted }]}>{c.item.price} TL</Text>
-              <View style={styles.qtyRow}>
-                <TouchableOpacity onPress={() => updateQuantity(i, c.quantity - 1)} style={[styles.qtyBtn, { backgroundColor: theme.inputBackground }]}>
-                  <Text style={[styles.qtyBtnText, { color: theme.textPrimary }]}>-</Text>
-                </TouchableOpacity>
-                <Text style={[styles.qtyText, { color: theme.textPrimary }]}>{c.quantity}</Text>
-                <TouchableOpacity onPress={() => updateQuantity(i, c.quantity + 1)} style={[styles.qtyBtn, { backgroundColor: theme.inputBackground }]}>
-                  <Text style={[styles.qtyBtnText, { color: theme.textPrimary }]}>+</Text>
-                </TouchableOpacity>
+          {cart.map((c, i) => (
+            <View key={`${c.item.id}-${i}`} style={[styles.rowCard, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+              <View style={styles.itemInfo}>
+                <Text style={[styles.itemName, { color: theme.textPrimary }]}>{c.item.name}</Text>
+                <Text style={[styles.itemPrice, { color: theme.textMuted }]}>{c.item.price} TL</Text>
+                <View style={styles.qtyRow}>
+                  <TouchableOpacity onPress={() => updateQuantity(i, c.quantity - 1)} style={[styles.qtyBtn, { backgroundColor: theme.inputBackground }]}>
+                    <Text style={[styles.qtyBtnText, { color: theme.textPrimary }]}>-</Text>
+                  </TouchableOpacity>
+                  <Text style={[styles.qtyText, { color: theme.textPrimary }]}>{c.quantity}</Text>
+                  <TouchableOpacity onPress={() => updateQuantity(i, c.quantity + 1)} style={[styles.qtyBtn, { backgroundColor: theme.inputBackground }]}>
+                    <Text style={[styles.qtyBtnText, { color: theme.textPrimary }]}>+</Text>
+                  </TouchableOpacity>
+                </View>
               </View>
+
+              <TouchableOpacity onPress={() => updateQuantity(i, 0)}>
+                <Trash2 color={theme.danger} size={20} />
+              </TouchableOpacity>
+            </View>
+          ))}
+        </ScrollView>
+
+        {cart.length > 0 && (
+          <View>
+            <Text style={[styles.sectionTitle, { color: theme.textPrimary }]}>Odeme (Kapida)</Text>
+            <View style={styles.payRow}>
+              <TouchableOpacity
+                onPress={() => setPaymentMethod('Nakit')}
+                style={[
+                  styles.payBtn,
+                  { borderColor: theme.border, backgroundColor: isCashActive ? theme.accent : theme.surface }
+                ]}
+              >
+                <Banknote color={isCashActive ? theme.accentContrast : theme.textPrimary} />
+                <Text style={{ color: isCashActive ? theme.accentContrast : theme.textPrimary }}> Nakit</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                onPress={() => setPaymentMethod('Kart')}
+                style={[
+                  styles.payBtn,
+                  { borderColor: theme.border, backgroundColor: isCardActive ? theme.accent : theme.surface }
+                ]}
+              >
+                <CreditCard color={isCardActive ? theme.accentContrast : theme.textPrimary} />
+                <Text style={{ color: isCardActive ? theme.accentContrast : theme.textPrimary }}> Kart</Text>
+              </TouchableOpacity>
             </View>
 
-            <TouchableOpacity onPress={() => updateQuantity(i, 0)}>
-              <Trash2 color={theme.danger} size={20} />
-            </TouchableOpacity>
-          </View>
-        ))}
-      </ScrollView>
-
-      {cart.length > 0 && (
-        <View>
-          <Text style={[styles.sectionTitle, { color: theme.textPrimary }]}>Odeme (Kapida)</Text>
-          <View style={styles.payRow}>
-            <TouchableOpacity
-              onPress={() => setPaymentMethod('Nakit')}
-              style={[
-                styles.payBtn,
-                { borderColor: theme.border, backgroundColor: isCashActive ? theme.accent : theme.surface }
-              ]}
-            >
-              <Banknote color={isCashActive ? theme.accentContrast : theme.textPrimary} />
-              <Text style={{ color: isCashActive ? theme.accentContrast : theme.textPrimary }}> Nakit</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              onPress={() => setPaymentMethod('Kart')}
-              style={[
-                styles.payBtn,
-                { borderColor: theme.border, backgroundColor: isCardActive ? theme.accent : theme.surface }
-              ]}
-            >
-              <CreditCard color={isCardActive ? theme.accentContrast : theme.textPrimary} />
-              <Text style={{ color: isCardActive ? theme.accentContrast : theme.textPrimary }}> Kart</Text>
-            </TouchableOpacity>
-          </View>
-
-          <Text style={[styles.sectionTitle, { color: theme.textPrimary }]}>Siparis Notu</Text>
-          <TextInput
-            placeholder="Siparis notu"
-            placeholderTextColor={theme.textMuted}
-            style={[styles.input, { backgroundColor: theme.inputBackground, color: theme.textPrimary }]}
-            value={orderNote}
-            onChangeText={setOrderNote}
-          />
-
-          <Text style={[styles.sectionTitle, { color: theme.textPrimary }]}>Promosyon Kodu</Text>
-          <View style={styles.promoRow}>
+            <Text style={[styles.sectionTitle, { color: theme.textPrimary }]}>Siparis Notu</Text>
             <TextInput
-              placeholder="Kod"
+              placeholder="Siparis notu"
               placeholderTextColor={theme.textMuted}
-              style={[styles.input, styles.promoInput, { backgroundColor: theme.inputBackground, color: theme.textPrimary }]}
-              value={promoCode}
-              onChangeText={setPromoCode}
+              style={[styles.input, { backgroundColor: theme.inputBackground, color: theme.textPrimary }]}
+              value={orderNote}
+              onChangeText={setOrderNote}
             />
-            <TouchableOpacity onPress={applyPromoCode} style={[styles.promoBtn, { backgroundColor: theme.accent }]}>
-              <Text style={[styles.applyText, { color: theme.accentContrast }]}>Uygula</Text>
+
+            <Text style={[styles.sectionTitle, { color: theme.textPrimary }]}>Promosyon Kodu</Text>
+            <View style={styles.promoRow}>
+              <TextInput
+                placeholder="Kod"
+                placeholderTextColor={theme.textMuted}
+                style={[styles.input, styles.promoInput, { backgroundColor: theme.inputBackground, color: theme.textPrimary }]}
+                value={promoCode}
+                onChangeText={setPromoCode}
+              />
+              <TouchableOpacity onPress={applyPromoCode} style={[styles.promoBtn, { backgroundColor: theme.accent }]}>
+                <Text style={[styles.applyText, { color: theme.accentContrast }]}>Uygula</Text>
+              </TouchableOpacity>
+            </View>
+
+            {appliedDiscount && (
+              <Text style={{ color: theme.success, marginTop: 6 }}>
+                Indirim uygulandi: {appliedDiscount.type === 'percent' ? `${appliedDiscount.value}%` : `${appliedDiscount.value} TL`}
+              </Text>
+            )}
+
+            <View style={styles.totalRow}>
+              <Text style={{ color: theme.textMuted }}>Ara Toplam</Text>
+              <Text style={{ color: theme.textPrimary }}>{subTotal.toFixed(2)} TL</Text>
+            </View>
+
+            {discountAmount > 0 && (
+              <View style={styles.totalRow}>
+                <Text style={{ color: theme.success }}>Indirim</Text>
+                <Text style={{ color: theme.success }}>- {discountAmount.toFixed(2)} TL</Text>
+              </View>
+            )}
+
+            <View style={styles.totalRow}>
+              <Text style={[styles.totalLabel, { color: theme.textPrimary }]}>Toplam</Text>
+              <Text style={[styles.totalLabel, { color: theme.textPrimary }]}>{finalTotal.toFixed(2)} TL</Text>
+            </View>
+
+            <TouchableOpacity onPress={placeOrder} style={[styles.primaryBtn, { backgroundColor: theme.accent }]}>
+              <Text style={[styles.btnText, { color: theme.accentContrast }]}>Siparisi Onayla</Text>
             </TouchableOpacity>
           </View>
-
-          {appliedDiscount && (
-            <Text style={{ color: theme.success, marginTop: 6 }}>
-              Indirim uygulandi: {appliedDiscount.type === 'percent' ? `${appliedDiscount.value}%` : `${appliedDiscount.value} TL`}
-            </Text>
-          )}
-
-          <View style={styles.totalRow}>
-            <Text style={{ color: theme.textMuted }}>Ara Toplam</Text>
-            <Text style={{ color: theme.textPrimary }}>{subTotal.toFixed(2)} TL</Text>
-          </View>
-
-          {discountAmount > 0 && (
-            <View style={styles.totalRow}>
-              <Text style={{ color: theme.success }}>Indirim</Text>
-              <Text style={{ color: theme.success }}>- {discountAmount.toFixed(2)} TL</Text>
-            </View>
-          )}
-
-          <View style={styles.totalRow}>
-            <Text style={[styles.totalLabel, { color: theme.textPrimary }]}>Toplam</Text>
-            <Text style={[styles.totalLabel, { color: theme.textPrimary }]}>{finalTotal.toFixed(2)} TL</Text>
-          </View>
-
-          <TouchableOpacity onPress={placeOrder} style={[styles.primaryBtn, { backgroundColor: theme.accent }]}>
-            <Text style={[styles.btnText, { color: theme.accentContrast }]}>Siparisi Onayla</Text>
-          </TouchableOpacity>
-        </View>
-      )}
-    </View>
+        )}
+      </View>
+    </TouchableWithoutFeedback>
   );
 }
 

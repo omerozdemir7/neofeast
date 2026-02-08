@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, TextInput, StyleSheet, SafeAreaView, Alert, Linking, Image } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, TextInput, StyleSheet, Alert, Linking, Image, Keyboard, TouchableWithoutFeedback } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { LogOut, Trash2, CheckCircle, Truck, Utensils, Phone } from 'lucide-react-native';
 import { UserType, Restaurant, Order } from '../types';
 import { db } from '../firebaseConfig';
@@ -126,7 +127,8 @@ export default function SellerPanel({ user, restaurants, orders, onLogout }: Pro
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
+      <SafeAreaView style={styles.container}>
       <View style={styles.header}>
         <View>
           <Text style={styles.title}>{myRest?.name || 'Restoran Paneli'}</Text>
@@ -149,7 +151,7 @@ export default function SellerPanel({ user, restaurants, orders, onLogout }: Pro
       </View>
 
       {tab === 'orders' ? (
-        <ScrollView contentContainerStyle={styles.content}>
+        <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
           {myOrders.length === 0 && <Text style={styles.emptyText}>Henuz siparis yok.</Text>}
           {myOrders.map((order) => (
             <View key={order.id} style={styles.orderCard}>
@@ -202,7 +204,7 @@ export default function SellerPanel({ user, restaurants, orders, onLogout }: Pro
           ))}
         </ScrollView>
       ) : (
-        <ScrollView contentContainerStyle={styles.content}>
+        <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
           <View style={styles.formCard}>
             <Text style={styles.formTitle}>Menuye Ekle</Text>
             <TextInput placeholder="Ürün Adı" style={styles.input} value={newItem.name} onChangeText={(text) => setNewItem({ ...newItem, name: text })} />
@@ -239,7 +241,8 @@ export default function SellerPanel({ user, restaurants, orders, onLogout }: Pro
           ))}
         </ScrollView>
       )}
-    </SafeAreaView>
+      </SafeAreaView>
+    </TouchableWithoutFeedback>
   );
 }
 

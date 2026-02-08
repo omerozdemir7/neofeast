@@ -1,4 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { ImageBackground, StyleSheet, View } from 'react-native';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { UserType, Restaurant, Order, Promotion } from './src/types';
 // API_URL artık kullanılmıyor, silebilirsin.
 import { auth, db } from './src/firebaseConfig'; // Firebase import
@@ -19,6 +21,7 @@ export default function App() {
   const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
   const [promotions, setPromotions] = useState<Promotion[]>([]);
+  const [showLaunchSplash, setShowLaunchSplash] = useState(true);
   const [toast, setToast] = useState<{ message: string; type: ToastType; visible: boolean }>({
     message: '',
     type: 'info',
@@ -33,6 +36,11 @@ export default function App() {
       setToast((prev) => ({ ...prev, visible: false }));
     }, 2400);
   };
+
+  useEffect(() => {
+    const timer = setTimeout(() => setShowLaunchSplash(false), 1200);
+    return () => clearTimeout(timer);
+  }, []);
 
   // Kullanıcı giriş durumunu dinle (Otomatik Giriş)
   useEffect(() => {
@@ -159,14 +167,28 @@ export default function App() {
   }
 
   return (
-    <>
-      {content}
-      <ToastMessage
-        message={toast.message}
-        type={toast.type}
-        visible={toast.visible}
-        onHide={() => setToast((prev) => ({ ...prev, visible: false }))}
-      />
-    </>
+    <SafeAreaProvider>
+      <View style={styles.root}>
+        {content}
+        <ToastMessage
+          message={toast.message}
+          type={toast.type}
+          visible={toast.visible}
+          onHide={() => setToast((prev) => ({ ...prev, visible: false }))}
+        />
+        {showLaunchSplash && (
+          <ImageBackground
+            source={require('./assets/splash.png')}
+            resizeMode="cover"
+            style={styles.launchSplash}
+          />
+        )}
+      </View>
+    </SafeAreaProvider>
   );
 }
+
+const styles = StyleSheet.create({
+  root: { flex: 1 },
+  launchSplash: { ...StyleSheet.absoluteFillObject }
+});

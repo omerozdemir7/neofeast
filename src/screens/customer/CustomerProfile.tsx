@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Modal, TextInput, ScrollView } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Modal, TextInput, ScrollView, Keyboard, TouchableWithoutFeedback } from 'react-native';
 import { LogOut, MapPin, User, Receipt, Trash2, Check } from 'lucide-react-native';
 import { UserType, Address } from '../../types';
 import { db } from '../../firebaseConfig';
@@ -89,7 +89,8 @@ export default function CustomerProfile({ user, onUpdateUser, onLogout, onNaviga
   };
 
   return (
-    <View style={[styles.container, { backgroundColor: theme.background }]}>
+    <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
+      <View style={[styles.container, { backgroundColor: theme.background }]}>
       <View style={[styles.card, { backgroundColor: theme.surface, borderColor: theme.border }]}>
         <View style={[styles.avatar, { backgroundColor: theme.accent }]}>
           <User size={40} color={theme.accentContrast} />
@@ -127,114 +128,123 @@ export default function CustomerProfile({ user, onUpdateUser, onLogout, onNaviga
       </TouchableOpacity>
 
       <Modal visible={profileModalVisible} transparent animationType="fade">
-        <View style={[styles.modalOverlay, { backgroundColor: theme.modalOverlay }]}>
-          <View style={[styles.modalContent, { backgroundColor: theme.surface, borderColor: theme.border }]}>
-            <Text style={[styles.modalTitle, { color: theme.textPrimary }]}>Profili Duzenle</Text>
+        <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
+          <View style={[styles.modalOverlay, { backgroundColor: theme.modalOverlay }]}>
+            <TouchableWithoutFeedback onPress={() => {}}>
+              <View style={[styles.modalContent, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+                <Text style={[styles.modalTitle, { color: theme.textPrimary }]}>Profili Duzenle</Text>
 
-            <TextInput
-              placeholder="Ad Soyad"
-              placeholderTextColor={theme.textMuted}
-              style={[styles.input, { backgroundColor: theme.inputBackground, color: theme.textPrimary }]}
-              value={editUser.name || ''}
-              onChangeText={(t) => setEditUser({ ...editUser, name: t })}
-            />
+                <TextInput
+                  placeholder="Ad Soyad"
+                  placeholderTextColor={theme.textMuted}
+                  style={[styles.input, { backgroundColor: theme.inputBackground, color: theme.textPrimary }]}
+                  value={editUser.name || ''}
+                  onChangeText={(t) => setEditUser({ ...editUser, name: t })}
+                />
 
-            <TextInput
-              placeholder="E-posta"
-              placeholderTextColor={theme.textMuted}
-              style={[styles.input, { backgroundColor: theme.surfaceAlt, color: theme.textMuted }]}
-              value={editUser.email || ''}
-              editable={false}
-            />
+                <TextInput
+                  placeholder="E-posta"
+                  placeholderTextColor={theme.textMuted}
+                  style={[styles.input, { backgroundColor: theme.surfaceAlt, color: theme.textMuted }]}
+                  value={editUser.email || ''}
+                  editable={false}
+                />
 
-            <TextInput
-              placeholder="Telefon"
-              placeholderTextColor={theme.textMuted}
-              style={[styles.input, { backgroundColor: theme.inputBackground, color: theme.textPrimary }]}
-              value={editUser.phone || ''}
-              keyboardType="phone-pad"
-              onChangeText={(t) => setEditUser({ ...editUser, phone: t })}
-            />
+                <TextInput
+                  placeholder="Telefon"
+                  placeholderTextColor={theme.textMuted}
+                  style={[styles.input, { backgroundColor: theme.inputBackground, color: theme.textPrimary }]}
+                  value={editUser.phone || ''}
+                  keyboardType="phone-pad"
+                  onChangeText={(t) => setEditUser({ ...editUser, phone: t })}
+                />
 
-            <TouchableOpacity onPress={saveProfile} style={[styles.primaryBtn, { backgroundColor: theme.accent }]}>
-              <Text style={[styles.btnText, { color: theme.accentContrast }]}>Kaydet</Text>
-            </TouchableOpacity>
+                <TouchableOpacity onPress={saveProfile} style={[styles.primaryBtn, { backgroundColor: theme.accent }]}>
+                  <Text style={[styles.btnText, { color: theme.accentContrast }]}>Kaydet</Text>
+                </TouchableOpacity>
 
-            <TouchableOpacity onPress={() => setProfileModalVisible(false)} style={styles.closeButton}>
-              <Text style={{ color: theme.textMuted }}>Kapat</Text>
-            </TouchableOpacity>
+                <TouchableOpacity onPress={() => setProfileModalVisible(false)} style={styles.closeButton}>
+                  <Text style={{ color: theme.textMuted }}>Kapat</Text>
+                </TouchableOpacity>
+              </View>
+            </TouchableWithoutFeedback>
           </View>
-        </View>
+        </TouchableWithoutFeedback>
       </Modal>
 
       <Modal visible={addressModalVisible} transparent animationType="fade">
-        <View style={[styles.modalOverlay, { backgroundColor: theme.modalOverlay }]}>
-          <View style={[styles.modalContent, { backgroundColor: theme.surface, borderColor: theme.border }]}>
-            <Text style={[styles.modalTitle, { color: theme.textPrimary }]}>Adreslerim</Text>
+        <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
+          <View style={[styles.modalOverlay, { backgroundColor: theme.modalOverlay }]}>
+            <TouchableWithoutFeedback onPress={() => {}}>
+              <View style={[styles.modalContent, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+                <Text style={[styles.modalTitle, { color: theme.textPrimary }]}>Adreslerim</Text>
 
-            <ScrollView style={styles.addressScroll}>
-              {(user.addresses || []).length === 0 && (
-                <Text style={{ color: theme.textMuted, fontStyle: 'italic' }}>Kayitli adres yok.</Text>
-              )}
+                <ScrollView style={styles.addressScroll} keyboardShouldPersistTaps="handled">
+                  {(user.addresses || []).length === 0 && (
+                    <Text style={{ color: theme.textMuted, fontStyle: 'italic' }}>Kayitli adres yok.</Text>
+                  )}
 
-              {(user.addresses || []).map((address) => (
-                <View
-                  key={address.id}
-                  style={[
-                    styles.addressItem,
-                    { backgroundColor: theme.surfaceAlt, borderColor: theme.border }
-                  ]}
-                >
-                  <TouchableOpacity style={styles.addressInfo} onPress={() => setDefaultAddress(address.id)}>
-                    <View style={styles.addressHead}>
-                      {address.isDefault ? (
-                        <Check size={16} color={theme.accent} />
-                      ) : (
-                        <View style={[styles.dot, { borderColor: theme.border }]} />
-                      )}
-                      <Text style={[styles.addressTitle, { color: theme.textPrimary }]}>{address.title}</Text>
+                  {(user.addresses || []).map((address) => (
+                    <View
+                      key={address.id}
+                      style={[
+                        styles.addressItem,
+                        { backgroundColor: theme.surfaceAlt, borderColor: theme.border }
+                      ]}
+                    >
+                      <TouchableOpacity style={styles.addressInfo} onPress={() => setDefaultAddress(address.id)}>
+                        <View style={styles.addressHead}>
+                          {address.isDefault ? (
+                            <Check size={16} color={theme.accent} />
+                          ) : (
+                            <View style={[styles.dot, { borderColor: theme.border }]} />
+                          )}
+                          <Text style={[styles.addressTitle, { color: theme.textPrimary }]}>{address.title}</Text>
+                        </View>
+                        <Text style={[styles.addressText, { color: theme.textMuted }]}>{address.fullAddress}</Text>
+                      </TouchableOpacity>
+
+                      <TouchableOpacity onPress={() => deleteAddress(address.id)} style={styles.deleteAddressButton}>
+                        <Trash2 color={theme.danger} size={18} />
+                      </TouchableOpacity>
                     </View>
-                    <Text style={[styles.addressText, { color: theme.textMuted }]}>{address.fullAddress}</Text>
-                  </TouchableOpacity>
+                  ))}
+                </ScrollView>
 
-                  <TouchableOpacity onPress={() => deleteAddress(address.id)} style={styles.deleteAddressButton}>
-                    <Trash2 color={theme.danger} size={18} />
+                <View style={[styles.addAddressSection, { borderColor: theme.border }]}>
+                  <Text style={[styles.addAddressTitle, { color: theme.textSecondary }]}>Yeni Adres Ekle</Text>
+
+                  <TextInput
+                    placeholder="Baslik (Ev, Is)"
+                    placeholderTextColor={theme.textMuted}
+                    style={[styles.input, { backgroundColor: theme.inputBackground, color: theme.textPrimary }]}
+                    value={addressForm.title}
+                    onChangeText={(t) => setAddressForm({ ...addressForm, title: t })}
+                  />
+
+                  <TextInput
+                    placeholder="Acik Adres"
+                    placeholderTextColor={theme.textMuted}
+                    style={[styles.input, { backgroundColor: theme.inputBackground, color: theme.textPrimary }]}
+                    value={addressForm.fullAddress}
+                    onChangeText={(t) => setAddressForm({ ...addressForm, fullAddress: t })}
+                  />
+
+                  <TouchableOpacity onPress={addAddress} style={[styles.primaryBtn, { backgroundColor: theme.accent }]}>
+                    <Text style={[styles.btnText, { color: theme.accentContrast }]}>Adres Ekle</Text>
                   </TouchableOpacity>
                 </View>
-              ))}
-            </ScrollView>
 
-            <View style={[styles.addAddressSection, { borderColor: theme.border }]}>
-              <Text style={[styles.addAddressTitle, { color: theme.textSecondary }]}>Yeni Adres Ekle</Text>
-
-              <TextInput
-                placeholder="Baslik (Ev, Is)"
-                placeholderTextColor={theme.textMuted}
-                style={[styles.input, { backgroundColor: theme.inputBackground, color: theme.textPrimary }]}
-                value={addressForm.title}
-                onChangeText={(t) => setAddressForm({ ...addressForm, title: t })}
-              />
-
-              <TextInput
-                placeholder="Acik Adres"
-                placeholderTextColor={theme.textMuted}
-                style={[styles.input, { backgroundColor: theme.inputBackground, color: theme.textPrimary }]}
-                value={addressForm.fullAddress}
-                onChangeText={(t) => setAddressForm({ ...addressForm, fullAddress: t })}
-              />
-
-              <TouchableOpacity onPress={addAddress} style={[styles.primaryBtn, { backgroundColor: theme.accent }]}>
-                <Text style={[styles.btnText, { color: theme.accentContrast }]}>Adres Ekle</Text>
-              </TouchableOpacity>
-            </View>
-
-            <TouchableOpacity onPress={() => setAddressModalVisible(false)} style={styles.closeButton}>
-              <Text style={{ color: theme.textMuted }}>Kapat</Text>
-            </TouchableOpacity>
+                <TouchableOpacity onPress={() => setAddressModalVisible(false)} style={styles.closeButton}>
+                  <Text style={{ color: theme.textMuted }}>Kapat</Text>
+                </TouchableOpacity>
+              </View>
+            </TouchableWithoutFeedback>
           </View>
-        </View>
+        </TouchableWithoutFeedback>
       </Modal>
-    </View>
+      </View>
+    </TouchableWithoutFeedback>
   );
 }
 

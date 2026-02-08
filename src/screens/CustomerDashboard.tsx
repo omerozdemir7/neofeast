@@ -1,5 +1,6 @@
-import React, { useEffect, useMemo, useState } from 'react';
-import { View, Text, TouchableOpacity, SafeAreaView, StyleSheet, Platform, Alert } from 'react-native';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { View, Text, TouchableOpacity, StyleSheet, Platform, Alert } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Moon, Sun, User } from 'lucide-react-native';
 import { Restaurant, Order, UserType, CartItem, MenuItem, Promotion } from '../types';
@@ -12,6 +13,62 @@ import CustomerBottomBar from './customer/CustomerBottomBar';
 import { customerThemes, ThemeMode, themeStorageKey } from './customer/theme';
 
 type Tab = 'home' | 'search' | 'cart' | 'orders' | 'profile';
+
+const cartStorageKeyPrefix = 'customer_cart_v1';
+
+const getCartStorageKey = (userId: string) => `${cartStorageKeyPrefix}:${userId}`;
+
+const parseStoredCart = (raw: string | null): CartItem[] => {
+  if (!raw) return [];
+  try {
+    const parsed: unknown = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return [];
+
+    const nextCart: CartItem[] = [];
+    parsed.forEach((entry) => {
+      if (!entry || typeof entry !== 'object') return;
+      const record = entry as Record<string, unknown>;
+
+      const restaurantId = typeof record.restaurantId === 'string' ? record.restaurantId : null;
+      if (!restaurantId) return;
+
+      const restaurantName = typeof record.restaurantName === 'string' ? record.restaurantName : '';
+
+      const itemUnknown = record.item;
+      if (!itemUnknown || typeof itemUnknown !== 'object') return;
+      const itemRecord = itemUnknown as Record<string, unknown>;
+
+      const id = typeof itemRecord.id === 'string' ? itemRecord.id : null;
+      const name = typeof itemRecord.name === 'string' ? itemRecord.name : null;
+      const description = typeof itemRecord.description === 'string' ? itemRecord.description : '';
+      const priceValue = typeof itemRecord.price === 'number' ? itemRecord.price : Number(itemRecord.price);
+      const price = Number.isFinite(priceValue) ? priceValue : null;
+      if (!id || !name || price === null) return;
+
+      const imageUrl = typeof itemRecord.imageUrl === 'string' ? itemRecord.imageUrl : undefined;
+
+      const quantityValue = typeof record.quantity === 'number' ? record.quantity : Number(record.quantity);
+      const quantity = Number.isFinite(quantityValue) ? Math.max(1, Math.floor(quantityValue)) : 1;
+
+      nextCart.push({
+        restaurantId,
+        restaurantName,
+        quantity,
+        item: {
+          id,
+          name,
+          description,
+          price,
+          imageUrl
+        }
+      });
+    });
+
+    return nextCart;
+  } catch {
+    return [];
+  }
+};
 
 interface Props {
   user: UserType;
@@ -42,6 +99,8 @@ export default function CustomerDashboard({
   const [themeMode, setThemeMode] = useState<ThemeMode>('light');
   const notify = (message: string, type: 'success' | 'error' | 'info' = 'info') => onNotify(message, type);
   const theme = useMemo(() => customerThemes[themeMode], [themeMode]);
+  const cartStorageKey = useMemo(() => getCartStorageKey(user._id), [user._id]);
+  const cartHydratedRef = useRef(false);
 
   useEffect(() => {
     let mounted = true;
@@ -62,6 +121,45 @@ export default function CustomerDashboard({
       mounted = false;
     };
   }, []);
+
+  useEffect(() => {
+    let mounted = true;
+    cartHydratedRef.current = false;
+    setCart([]);
+
+    const loadCart = async () => {
+      try {
+        const stored = await AsyncStorage.getItem(cartStorageKey);
+        const restored = parseStoredCart(stored);
+        if (mounted) {
+          setCart(restored);
+        }
+      } catch {
+        if (mounted) {
+          setCart([]);
+        }
+      } finally {
+        if (mounted) {
+          cartHydratedRef.current = true;
+        }
+      }
+    };
+
+    loadCart();
+    return () => {
+      mounted = false;
+    };
+  }, [cartStorageKey]);
+
+  useEffect(() => {
+    if (!cartHydratedRef.current) return;
+
+    try {
+      AsyncStorage.setItem(cartStorageKey, JSON.stringify(cart)).catch(() => {});
+    } catch {
+      // JSON parse/stringify beklenmedik sekilde hata verirse sepet kaydi atlanir.
+    }
+  }, [cart, cartStorageKey]);
 
   const filteredRestaurants = useMemo(() => {
     const query = searchQuery.trim().toLowerCase();
