@@ -1,0 +1,5 @@
+{
+  "name": "NeoFeast",
+  "description": "A modern food delivery application featuring restaurant listings, menu details, cart management, and user profiles, designed with a mobile-first approach.",
+  "requestFramePermissions": []
+}
