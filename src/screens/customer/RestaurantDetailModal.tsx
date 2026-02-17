@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useRef } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { View, Text, ScrollView, Image, TouchableOpacity, Modal, StyleSheet, PanResponder, Animated, useWindowDimensions } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Plus, X } from 'lucide-react-native';
@@ -20,6 +20,8 @@ export default function RestaurantDetailModal({ visible, restaurant, onClose, on
   const isClosingRef = useRef(false);
   const translateY = useRef(new Animated.Value(0)).current;
   const backdropOpacity = useRef(new Animated.Value(0)).current;
+  const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [localToast, setLocalToast] = useState<string | null>(null);
 
   const sheetHeight = useMemo(() => {
     const preferred = screenHeight * 0.82;
@@ -30,6 +32,12 @@ export default function RestaurantDetailModal({ visible, restaurant, onClose, on
   const closeSheet = useCallback(() => {
     if (isClosingRef.current) return;
     isClosingRef.current = true;
+
+    if (toastTimerRef.current) {
+      clearTimeout(toastTimerRef.current);
+      toastTimerRef.current = null;
+    }
+    setLocalToast(null);
 
     Animated.parallel([
       Animated.timing(translateY, {
@@ -47,6 +55,18 @@ export default function RestaurantDetailModal({ visible, restaurant, onClose, on
       onClose();
     });
   }, [backdropOpacity, onClose, sheetHeight, translateY]);
+
+  useEffect(() => {
+    return () => {
+      if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+    };
+  }, []);
+
+  const showLocalToast = useCallback((message: string) => {
+    setLocalToast(message);
+    if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+    toastTimerRef.current = setTimeout(() => setLocalToast(null), 1200);
+  }, []);
 
   useEffect(() => {
     if (!visible) return;
@@ -164,13 +184,31 @@ export default function RestaurantDetailModal({ visible, restaurant, onClose, on
                       <Text style={[styles.menuDescription, { color: theme.textMuted }]}>{menuItem.description}</Text>
                       <Text style={[styles.menuPrice, { color: theme.accent }]}>{menuItem.price} TL</Text>
                     </View>
-                    <TouchableOpacity onPress={() => onAddToCart(menuItem, restaurant)} style={[styles.addBtn, { backgroundColor: theme.accent }]}>
+                    <TouchableOpacity
+                      onPress={() => {
+                        onAddToCart(menuItem, restaurant);
+                        showLocalToast('Sepete eklendi');
+                      }}
+                      style={[styles.addBtn, { backgroundColor: theme.accent }]}
+                    >
                       <Plus color={theme.accentContrast} />
                     </TouchableOpacity>
                   </View>
                 ))}
               </View>
             </ScrollView>
+
+            {localToast ? (
+              <View
+                pointerEvents="none"
+                style={[
+                  styles.toast,
+                  { backgroundColor: theme.accent, bottom: Math.max(12, insets.bottom + 12) }
+                ]}
+              >
+                <Text style={[styles.toastText, { color: theme.accentContrast }]}>{localToast}</Text>
+              </View>
+            ) : null}
           </SafeAreaView>
         </Animated.View>
       </View>
@@ -226,5 +264,22 @@ const styles = StyleSheet.create({
   menuName: { fontWeight: 'bold' },
   menuDescription: { fontSize: 12 },
   menuPrice: { fontWeight: 'bold' },
-  addBtn: { padding: 8, borderRadius: 20 }
+  addBtn: { padding: 8, borderRadius: 20 },
+  toast: {
+    position: 'absolute',
+    left: 16,
+    right: 16,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 50,
+    elevation: 6,
+    shadowColor: '#000',
+    shadowOpacity: 0.18,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 }
+  },
+  toastText: { fontWeight: '700', textAlign: 'center' }
 });

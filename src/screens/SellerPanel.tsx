@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, TextInput, StyleSheet, Alert, Linking, Image, Keyboard, TouchableWithoutFeedback } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, TextInput, StyleSheet, Alert, Linking, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LogOut, Trash2, CheckCircle, Truck, Utensils, Phone } from 'lucide-react-native';
 import { UserType, Restaurant, Order } from '../types';
@@ -45,6 +45,13 @@ export default function SellerPanel({ user, restaurants, orders, onLogout }: Pro
 
     knownOrderIdsRef.current = myOrders.map((order) => order.id);
   }, [myOrders]);
+
+  const confirmLogout = () => {
+    Alert.alert('Cikis Yap', 'Cikis yapmak istiyor musunuz?', [
+      { text: 'Hayir', style: 'cancel' },
+      { text: 'Evet', style: 'destructive', onPress: onLogout }
+    ]);
+  };
 
   const updateOrder = async (id: string, status: string) => {
     try {
@@ -127,14 +134,13 @@ export default function SellerPanel({ user, restaurants, orders, onLogout }: Pro
   };
 
   return (
-    <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
-      <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container}>
       <View style={styles.header}>
         <View>
           <Text style={styles.title}>{myRest?.name || 'Restoran Paneli'}</Text>
           <Text style={styles.sellerLabel}>Satici: {user.name}</Text>
         </View>
-        <TouchableOpacity onPress={onLogout} style={styles.iconButton}>
+        <TouchableOpacity onPress={confirmLogout} style={styles.iconButton}>
           <LogOut color="white" />
         </TouchableOpacity>
       </View>
@@ -151,7 +157,7 @@ export default function SellerPanel({ user, restaurants, orders, onLogout }: Pro
       </View>
 
       {tab === 'orders' ? (
-        <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+        <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag">
           {myOrders.length === 0 && <Text style={styles.emptyText}>Henuz siparis yok.</Text>}
           {myOrders.map((order) => (
             <View key={order.id} style={styles.orderCard}>
@@ -204,13 +210,13 @@ export default function SellerPanel({ user, restaurants, orders, onLogout }: Pro
           ))}
         </ScrollView>
       ) : (
-        <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+        <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag">
           <View style={styles.formCard}>
             <Text style={styles.formTitle}>Menuye Ekle</Text>
-            <TextInput placeholder="Ürün Adı" style={styles.input} value={newItem.name} onChangeText={(text) => setNewItem({ ...newItem, name: text })} />
-            <TextInput placeholder="Fiyat (TL)" style={styles.input} keyboardType="numeric" value={newItem.price} onChangeText={(text) => setNewItem({ ...newItem, price: text })} />
-            <TextInput placeholder="Açıklama" style={styles.input} value={newItem.description} onChangeText={(text) => setNewItem({ ...newItem, description: text })} />
-            <TextInput placeholder="Görsel Linki (https://...)" style={styles.input} value={newItem.imageUrl} onChangeText={(text) => setNewItem({ ...newItem, imageUrl: text })} />
+            <TextInput placeholder="Ürün Adı" placeholderTextColor="#6B7280" style={styles.input} value={newItem.name} onChangeText={(text) => setNewItem({ ...newItem, name: text })} />
+            <TextInput placeholder="Fiyat (TL)" placeholderTextColor="#6B7280" style={styles.input} keyboardType="numeric" value={newItem.price} onChangeText={(text) => setNewItem({ ...newItem, price: text })} />
+            <TextInput placeholder="Açıklama" placeholderTextColor="#6B7280" style={styles.input} value={newItem.description} onChangeText={(text) => setNewItem({ ...newItem, description: text })} />
+            <TextInput placeholder="Görsel Linki (https://...)" placeholderTextColor="#6B7280" style={styles.input} value={newItem.imageUrl} onChangeText={(text) => setNewItem({ ...newItem, imageUrl: text })} />
             <TouchableOpacity onPress={addItem} style={[styles.actionBtn, styles.addBtn]}>
               <Text style={styles.btnText}>Ekle</Text>
             </TouchableOpacity>
@@ -241,8 +247,7 @@ export default function SellerPanel({ user, restaurants, orders, onLogout }: Pro
           ))}
         </ScrollView>
       )}
-      </SafeAreaView>
-    </TouchableWithoutFeedback>
+    </SafeAreaView>
   );
 }
 

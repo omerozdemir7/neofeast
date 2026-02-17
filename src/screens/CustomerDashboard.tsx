@@ -289,7 +289,7 @@ export default function CustomerDashboard({
           theme={theme}
         />
       )}
-      {activeTab === 'orders' && <CustomerOrders user={user} orders={orders} theme={theme} />}
+      {activeTab === 'orders' && <CustomerOrders user={user} orders={orders} theme={theme} onNotify={notify} />}
       {activeTab === 'profile' && (
         <CustomerProfile
           user={user}

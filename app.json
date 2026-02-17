@@ -10,8 +10,8 @@
       "web"
     ],
     "splash": {
-      "image": "./assets/splash.png",
-      "resizeMode": "cover",
+      "image": "./assets/splash1.png",
+      "resizeMode": "contain",
       "backgroundColor": "#ffffff"
     },
     "entryPoint": "App.tsx",

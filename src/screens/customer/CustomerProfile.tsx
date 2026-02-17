@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Modal, TextInput, ScrollView, Keyboard, TouchableWithoutFeedback } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Modal, TextInput, ScrollView, Keyboard, TouchableWithoutFeedback, Alert } from 'react-native';
 import { LogOut, MapPin, User, Receipt, Trash2, Check } from 'lucide-react-native';
 import { UserType, Address } from '../../types';
 import { db } from '../../firebaseConfig';
@@ -22,6 +22,13 @@ export default function CustomerProfile({ user, onUpdateUser, onLogout, onNaviga
   const [addressForm, setAddressForm] = useState({ title: '', fullAddress: '' });
 
   const notify = (message: string, type: 'success' | 'error' | 'info' = 'info') => onNotify(message, type);
+
+  const confirmLogout = () => {
+    Alert.alert('Cikis Yap', 'Cikis yapmak istiyor musunuz?', [
+      { text: 'Hayir', style: 'cancel' },
+      { text: 'Evet', style: 'destructive', onPress: onLogout }
+    ]);
+  };
 
   useEffect(() => {
     setEditUser(user);
@@ -116,7 +123,7 @@ export default function CustomerProfile({ user, onUpdateUser, onLogout, onNaviga
       </TouchableOpacity>
 
       <TouchableOpacity
-        onPress={onLogout}
+        onPress={confirmLogout}
         style={[
           styles.rowCard,
           styles.logoutRow,

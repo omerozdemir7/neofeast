@@ -74,6 +74,13 @@ export default function AdminPanel({ restaurants, orders, promotions, onLogout }
     setRestaurantModalVisible(true);
   };
 
+  const confirmLogout = () => {
+    Alert.alert('Cikis Yap', 'Cikis yapmak istiyor musunuz?', [
+      { text: 'Hayir', style: 'cancel' },
+      { text: 'Evet', style: 'destructive', onPress: onLogout }
+    ]);
+  };
+
   const openEditRestaurantModal = (restaurant: Restaurant) => {
     const restaurantId = restaurant._id || restaurant.id;
     setEditingRestaurantId(restaurantId);
@@ -233,7 +240,7 @@ export default function AdminPanel({ restaurants, orders, promotions, onLogout }
       <SafeAreaView style={styles.container}>
         <View style={styles.header}>
           <Text style={styles.title}>Admin Paneli</Text>
-          <TouchableOpacity onPress={onLogout}>
+          <TouchableOpacity onPress={confirmLogout}>
             <LogOut color="white" />
           </TouchableOpacity>
         </View>
@@ -309,24 +316,28 @@ export default function AdminPanel({ restaurants, orders, promotions, onLogout }
                 <Text style={styles.modalTitle}>{editingRestaurantId ? 'Restoran Duzenle' : 'Yeni Restoran Ekle'}</Text>
                 <TextInput
                   placeholder="Restoran Adi"
+                  placeholderTextColor="#6B7280"
                   style={styles.input}
                   value={newRest.name}
                   onChangeText={(name) => setNewRest((prev) => ({ ...prev, name }))}
                 />
                 <TextInput
                   placeholder="Kategori (Orn: Burger)"
+                  placeholderTextColor="#6B7280"
                   style={styles.input}
                   value={newRest.category}
                   onChangeText={(category) => setNewRest((prev) => ({ ...prev, category }))}
                 />
                 <TextInput
                   placeholder="Teslimat (Orn: 30 dk)"
+                  placeholderTextColor="#6B7280"
                   style={styles.input}
                   value={newRest.deliveryTime}
                   onChangeText={(deliveryTime) => setNewRest((prev) => ({ ...prev, deliveryTime }))}
                 />
                 <TextInput
                   placeholder="Resim URL"
+                  placeholderTextColor="#6B7280"
                   style={styles.input}
                   value={newRest.image}
                   onChangeText={(image) => setNewRest((prev) => ({ ...prev, image }))}
@@ -359,12 +370,14 @@ export default function AdminPanel({ restaurants, orders, promotions, onLogout }
 
             <TextInput
               placeholder="Promosyon adi"
+              placeholderTextColor="#6B7280"
               style={styles.input}
               value={newPromo.title}
               onChangeText={(title) => setNewPromo((prev) => ({ ...prev, title }))}
             />
             <TextInput
               placeholder="Kod (Orn: NEO10)"
+              placeholderTextColor="#6B7280"
               autoCapitalize="characters"
               style={styles.input}
               value={newPromo.code}
@@ -372,6 +385,7 @@ export default function AdminPanel({ restaurants, orders, promotions, onLogout }
             />
             <TextInput
               placeholder="Gorsel URL (opsiyonel)"
+              placeholderTextColor="#6B7280"
               style={styles.input}
               value={newPromo.imageUrl}
               onChangeText={(imageUrl) => setNewPromo((prev) => ({ ...prev, imageUrl }))}
@@ -394,6 +408,7 @@ export default function AdminPanel({ restaurants, orders, promotions, onLogout }
 
             <TextInput
               placeholder={newPromo.type === 'percent' ? 'Indirim yuzdesi (Orn: 10)' : 'Indirim tutari (Orn: 50)'}
+              placeholderTextColor="#6B7280"
               style={styles.input}
               keyboardType="numeric"
               value={newPromo.value}
@@ -401,6 +416,7 @@ export default function AdminPanel({ restaurants, orders, promotions, onLogout }
             />
             <TextInput
               placeholder="Min sepet tutari (opsiyonel)"
+              placeholderTextColor="#6B7280"
               style={styles.input}
               keyboardType="numeric"
               value={newPromo.minOrderTotal}
@@ -408,6 +424,7 @@ export default function AdminPanel({ restaurants, orders, promotions, onLogout }
             />
             <TextInput
               placeholder="Max indirim (opsiyonel)"
+              placeholderTextColor="#6B7280"
               style={styles.input}
               keyboardType="numeric"
               value={newPromo.maxDiscountAmount}
@@ -498,7 +515,7 @@ const styles = StyleSheet.create({
   title: { color: 'white', fontSize: 20, fontWeight: 'bold' },
   content: { padding: 20, paddingBottom: 40 },
   sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 },
-  promoSectionHeader: { marginTop: 12 },
+  promoSectionHeader: { marginTop: 12, flexWrap: 'wrap' },
   sectionTitle: { fontWeight: 'bold', fontSize: 18, color: '#1F2937' },
   addBtn: {
     backgroundColor: '#2563EB',
@@ -509,9 +526,9 @@ const styles = StyleSheet.create({
     alignItems: 'center'
   },
   promoBtn: { backgroundColor: '#EA580C' },
-  specialPromoBtn: { backgroundColor: '#7C3AED', marginLeft: 8 },
+  specialPromoBtn: { backgroundColor: '#7C3AED' },
   addBtnText: { color: 'white', fontWeight: 'bold', marginLeft: 6 },
-  promoActionRow: { flexDirection: 'row', alignItems: 'center' },
+  promoActionRow: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 8, flexShrink: 1, maxWidth: '100%' },
   card: {
     flexDirection: 'row',
     backgroundColor: 'white',

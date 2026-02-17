@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { ImageBackground, StyleSheet, View } from 'react-native';
+import { Image, StyleSheet, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { UserType, Restaurant, Order, Promotion } from './src/types';
 // API_URL artık kullanılmıyor, silebilirsin.
@@ -177,11 +177,9 @@ export default function App() {
           onHide={() => setToast((prev) => ({ ...prev, visible: false }))}
         />
         {showLaunchSplash && (
-          <ImageBackground
-            source={require('./assets/splash.png')}
-            resizeMode="cover"
-            style={styles.launchSplash}
-          />
+          <View style={styles.launchSplash}>
+            <Image source={require('./assets/splash1.png')} resizeMode="contain" style={styles.launchLogo} />
+          </View>
         )}
       </View>
     </SafeAreaProvider>
@@ -190,5 +188,17 @@ export default function App() {
 
 const styles = StyleSheet.create({
   root: { flex: 1 },
-  launchSplash: { ...StyleSheet.absoluteFillObject }
+  launchSplash: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: '#FFFFFF',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 24
+  },
+  launchLogo: {
+    width: '100%',
+    maxWidth: 400,
+    maxHeight: 400,
+    aspectRatio: 1, // Logonun orantısını koru
+  }
 });
