@@ -41,3 +41,5 @@ dist-ssr
 # Ignore all env variants but allow template
 .env.*
 !.env.example
+# Firebase
+google-services.json
