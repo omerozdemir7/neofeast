@@ -42,4 +42,4 @@ dist-ssr
 .env.*
 !.env.example
 # Firebase
-google-services.json
+
