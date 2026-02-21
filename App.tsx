@@ -1,10 +1,10 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Image, StyleSheet, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-import { UserType, Restaurant, Order, Promotion } from './src/types';
+import { UserType, Restaurant, Order, Promotion, AppNotification } from './src/types';
 // API_URL artık kullanılmıyor, silebilirsin.
 import { auth, db } from './src/firebaseConfig'; // Firebase import
-import { collection, onSnapshot, doc, getDoc } from 'firebase/firestore'; 
+import { collection, onSnapshot, doc, getDoc, query, orderBy, limit } from 'firebase/firestore'; 
 import { onAuthStateChanged } from 'firebase/auth';
 
 // Ekranları İçe Aktar
@@ -13,6 +13,7 @@ import CustomerDashboard from './src/screens/CustomerDashboard';
 import AdminPanel from './src/screens/AdminPanel';
 import SellerPanel from './src/screens/SellerPanel';
 import ToastMessage from './src/components/ToastMessage';
+import { registerUserPushToken } from './src/services/pushNotifications';
 
 type ToastType = 'success' | 'error' | 'info';
 
@@ -21,6 +22,7 @@ export default function App() {
   const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
   const [promotions, setPromotions] = useState<Promotion[]>([]);
+  const [notifications, setNotifications] = useState<AppNotification[]>([]);
   const [showLaunchSplash, setShowLaunchSplash] = useState(true);
   const [toast, setToast] = useState<{ message: string; type: ToastType; visible: boolean }>({
     message: '',
@@ -41,6 +43,11 @@ export default function App() {
     const timer = setTimeout(() => setShowLaunchSplash(false), 1200);
     return () => clearTimeout(timer);
   }, []);
+
+  useEffect(() => {
+    if (!currentUser?._id) return;
+    registerUserPushToken(currentUser._id).catch(() => {});
+  }, [currentUser?._id]);
 
   // Kullanıcı giriş durumunu dinle (Otomatik Giriş)
   useEffect(() => {
@@ -89,10 +96,32 @@ export default function App() {
     const unsubPromo = onSnapshot(collection(db, "promos"), (snapshot) => {
       const list = snapshot.docs
         .map((promoDoc) => {
-          const data = promoDoc.data() as Partial<Promotion> & {
-            startsAt?: { toMillis?: () => number };
-            endsAt?: { toMillis?: () => number };
+          const data = promoDoc.data() as Omit<Partial<Promotion>, 'startsAt' | 'endsAt'> & {
+            startsAt?: number | { toMillis?: () => number };
+            endsAt?: number | { toMillis?: () => number };
           };
+
+          let startsAtValue: number | undefined;
+          if (typeof data.startsAt === "number") {
+            startsAtValue = data.startsAt;
+          } else if (
+            data.startsAt &&
+            typeof data.startsAt === "object" &&
+            typeof data.startsAt.toMillis === "function"
+          ) {
+            startsAtValue = data.startsAt.toMillis();
+          }
+
+          let endsAtValue: number | undefined;
+          if (typeof data.endsAt === "number") {
+            endsAtValue = data.endsAt;
+          } else if (
+            data.endsAt &&
+            typeof data.endsAt === "object" &&
+            typeof data.endsAt.toMillis === "function"
+          ) {
+            endsAtValue = data.endsAt.toMillis();
+          }
 
           return {
             id: promoDoc.id,
@@ -105,8 +134,8 @@ export default function App() {
             minOrderTotal: typeof data.minOrderTotal === "number" ? data.minOrderTotal : 0,
             maxDiscountAmount: typeof data.maxDiscountAmount === "number" ? data.maxDiscountAmount : undefined,
             targetUserIds: Array.isArray(data.targetUserIds) ? data.targetUserIds.filter((id): id is string => typeof id === "string") : [],
-            startsAt: data.startsAt?.toMillis?.(),
-            endsAt: data.endsAt?.toMillis?.(),
+            startsAt: startsAtValue,
+            endsAt: endsAtValue,
             createdAt: typeof data.createdAt === "string" ? data.createdAt : undefined
           } as Promotion;
         })
@@ -120,10 +149,55 @@ export default function App() {
       setPromotions(list);
     });
 
+    const notificationQuery = query(collection(db, "notifications"), orderBy("createdAt", "desc"), limit(150));
+    const unsubNotification = onSnapshot(notificationQuery, (snapshot) => {
+      const list = snapshot.docs
+        .map((notificationDoc) => {
+          const data = notificationDoc.data() as Omit<Partial<AppNotification>, 'createdAt'> & {
+            createdAt?: number | string | { toMillis?: () => number };
+          };
+
+          let createdAtValue = 0;
+          if (typeof data.createdAt === "number") {
+            createdAtValue = data.createdAt;
+          } else if (typeof data.createdAt === "string") {
+            createdAtValue = Date.parse(data.createdAt) || 0;
+          } else if (
+            data.createdAt &&
+            typeof data.createdAt === "object" &&
+            typeof data.createdAt.toMillis === "function"
+          ) {
+            createdAtValue = data.createdAt.toMillis();
+          }
+
+          return {
+            id: notificationDoc.id,
+            title: typeof data.title === "string" ? data.title : "Bildirim",
+            message: typeof data.message === "string" ? data.message : "",
+            type: data.type === "promotion"
+              ? "promotion"
+              : data.type === "order_status"
+                ? "order_status"
+                : "manual",
+            targetType: data.targetType === "users" ? "users" : "all",
+            targetUserIds: Array.isArray(data.targetUserIds) ? data.targetUserIds.filter((id): id is string => typeof id === "string") : [],
+            relatedPromoCode: typeof data.relatedPromoCode === "string" ? data.relatedPromoCode : null,
+            relatedOrderId: typeof data.relatedOrderId === "string" ? data.relatedOrderId : null,
+            createdAt: createdAtValue,
+            createdBy: typeof data.createdBy === "string" ? data.createdBy : undefined,
+            readBy: Array.isArray(data.readBy) ? data.readBy.filter((id): id is string => typeof id === "string") : []
+          } as AppNotification;
+        })
+        .sort((a, b) => b.createdAt - a.createdAt);
+
+      setNotifications(list);
+    });
+
     return () => {
       unsubRest();
       unsubOrder();
       unsubPromo();
+      unsubNotification();
     };
   }, []);
 
@@ -158,6 +232,7 @@ export default function App() {
         restaurants={restaurants}
         orders={orders}
         promotions={promotions}
+        notifications={notifications}
         onLogout={() => auth.signOut()}
         refreshData={() => {}} // Firebase otomatik günceller, buna gerek yok
         onUpdateUser={(nextUser) => setCurrentUser(nextUser)}

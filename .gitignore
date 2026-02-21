@@ -42,4 +42,8 @@ dist-ssr
 .env.*
 !.env.example
 # Firebase
-
+google-services.json
+google-services*.json
+GoogleService-Info.plist
+*firebase-adminsdk*.json
+*service-account*.json

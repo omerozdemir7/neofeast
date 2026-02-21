@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, TextInput, StyleSheet, Alert, Modal, Image, Keyboard, TouchableWithoutFeedback } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { LogOut, Trash2, Plus, TicketPercent, Pencil } from 'lucide-react-native';
+import { LogOut, Trash2, Plus, TicketPercent, Pencil, BellRing } from 'lucide-react-native';
 import { Order, Promotion, Restaurant } from '../types';
 import { db } from '../firebaseConfig';
 import { collection, addDoc, deleteDoc, doc, setDoc, updateDoc } from 'firebase/firestore';
@@ -22,9 +22,16 @@ type PromoFormState = {
   value: string;
   minOrderTotal: string;
   maxDiscountAmount: string;
+  notificationMessage: string;
 };
 
 type PromoMode = 'global' | 'special';
+type NotificationAudience = 'all' | 'special';
+
+type NotificationFormState = {
+  title: string;
+  message: string;
+};
 
 type TopCustomer = {
   id: string;
@@ -37,9 +44,12 @@ const defaultPromoImage = 'https://images.unsplash.com/photo-1556740749-887f6717
 export default function AdminPanel({ restaurants, orders, promotions, onLogout }: Props) {
   const [restaurantModalVisible, setRestaurantModalVisible] = useState(false);
   const [promoModalVisible, setPromoModalVisible] = useState(false);
+  const [notificationModalVisible, setNotificationModalVisible] = useState(false);
   const [editingRestaurantId, setEditingRestaurantId] = useState<string | null>(null);
   const [promoMode, setPromoMode] = useState<PromoMode>('global');
+  const [notificationAudience, setNotificationAudience] = useState<NotificationAudience>('all');
   const [selectedTargetUserIds, setSelectedTargetUserIds] = useState<string[]>([]);
+  const [selectedNotificationUserIds, setSelectedNotificationUserIds] = useState<string[]>([]);
   const [newRest, setNewRest] = useState({ name: '', category: '', deliveryTime: '', image: '' });
   const [newPromo, setNewPromo] = useState<PromoFormState>({
     title: '',
@@ -48,7 +58,12 @@ export default function AdminPanel({ restaurants, orders, promotions, onLogout }
     type: 'percent',
     value: '10',
     minOrderTotal: '',
-    maxDiscountAmount: ''
+    maxDiscountAmount: '',
+    notificationMessage: ''
+  });
+  const [newNotification, setNewNotification] = useState<NotificationFormState>({
+    title: '',
+    message: ''
   });
 
   const topCustomers = useMemo<TopCustomer[]>(() => {
@@ -160,12 +175,63 @@ export default function AdminPanel({ restaurants, orders, promotions, onLogout }
     ));
   };
 
+  const openNotificationModal = () => {
+    setNotificationAudience('all');
+    setSelectedNotificationUserIds([]);
+    setNewNotification({ title: '', message: '' });
+    setNotificationModalVisible(true);
+  };
+
+  const toggleNotificationTargetUser = (userId: string) => {
+    setSelectedNotificationUserIds((previous) => (
+      previous.includes(userId) ? previous.filter((id) => id !== userId) : [...previous, userId]
+    ));
+  };
+
+  const sendManualNotification = async () => {
+    const title = newNotification.title.trim();
+    const message = newNotification.message.trim();
+
+    if (!title || !message) {
+      Alert.alert('Hata', 'Lutfen bildirim basligi ve mesaji girin.');
+      return;
+    }
+
+    if (notificationAudience === 'special' && selectedNotificationUserIds.length === 0) {
+      Alert.alert('Hata', 'Secili bildirim icin en az bir musteri secmelisin.');
+      return;
+    }
+
+    try {
+      await addDoc(collection(db, 'notifications'), {
+        title,
+        message,
+        type: 'manual',
+        targetType: notificationAudience === 'special' ? 'users' : 'all',
+        targetUserIds: notificationAudience === 'special' ? selectedNotificationUserIds : [],
+        relatedPromoCode: null,
+        createdAt: Date.now(),
+        createdBy: 'admin',
+        readBy: []
+      });
+
+      Alert.alert('Basarili', 'Bildirim gonderildi.');
+      setNotificationModalVisible(false);
+      setNotificationAudience('all');
+      setSelectedNotificationUserIds([]);
+      setNewNotification({ title: '', message: '' });
+    } catch (e: any) {
+      Alert.alert('Hata', e.message);
+    }
+  };
+
   const addPromo = async () => {
     const code = newPromo.code.trim().toUpperCase();
     const title = newPromo.title.trim();
     const parsedValue = Number(newPromo.value);
     const parsedMinOrder = Number(newPromo.minOrderTotal || 0);
     const parsedMaxDiscount = Number(newPromo.maxDiscountAmount || 0);
+    const customNotificationMessage = newPromo.notificationMessage.trim();
 
     if (!title || !code) {
       Alert.alert('Hata', 'Lutfen promosyon adi ve kodu girin.');
@@ -200,8 +266,34 @@ export default function AdminPanel({ restaurants, orders, promotions, onLogout }
         targetUserIds: promoMode === 'special' ? selectedTargetUserIds : [],
         createdAt: new Date().toISOString()
       });
+      let notificationFailed = false;
+      const defaultPromoMessage = promoMode === 'special'
+        ? `${title} kampanyasi hesabina tanimlandi. Kod: ${code}`
+        : `Yeni kampanya yayinda: ${title}. Kod: ${code}`;
+      const promoMessage = customNotificationMessage || defaultPromoMessage;
 
-      Alert.alert('Basarili', 'Promosyon kaydedildi.');
+      try {
+        await addDoc(collection(db, 'notifications'), {
+          title: promoMode === 'special' ? 'Sana Ozel Promosyon' : 'Yeni Promosyon',
+          message: promoMessage,
+          type: 'promotion',
+          targetType: promoMode === 'special' ? 'users' : 'all',
+          targetUserIds: promoMode === 'special' ? selectedTargetUserIds : [],
+          relatedPromoCode: code,
+          createdAt: Date.now(),
+          createdBy: 'admin',
+          readBy: []
+        });
+      } catch {
+        notificationFailed = true;
+      }
+
+      Alert.alert(
+        'Basarili',
+        notificationFailed
+          ? 'Promosyon kaydedildi ama bildirim gonderilemedi.'
+          : 'Promosyon kaydedildi ve bildirim gonderildi.'
+      );
       setPromoModalVisible(false);
       setSelectedTargetUserIds([]);
       setNewPromo({
@@ -211,7 +303,8 @@ export default function AdminPanel({ restaurants, orders, promotions, onLogout }
         type: 'percent',
         value: '10',
         minOrderTotal: '',
-        maxDiscountAmount: ''
+        maxDiscountAmount: '',
+        notificationMessage: ''
       });
     } catch (e: any) {
       Alert.alert('Hata', e.message);
@@ -284,6 +377,14 @@ export default function AdminPanel({ restaurants, orders, promotions, onLogout }
               <Text style={styles.addBtnText}>Ozel Promosyon</Text>
             </TouchableOpacity>
           </View>
+        </View>
+
+        <View style={[styles.sectionHeader, styles.notificationSectionHeader]}>
+          <Text style={styles.sectionTitle}>Bildirim</Text>
+          <TouchableOpacity onPress={openNotificationModal} style={[styles.addBtn, styles.notificationBtn]}>
+            <BellRing color="white" size={16} />
+            <Text style={styles.addBtnText}>Bildirim Gonder</Text>
+          </TouchableOpacity>
         </View>
 
         {promotions.map((promo) => {
@@ -430,6 +531,16 @@ export default function AdminPanel({ restaurants, orders, promotions, onLogout }
               value={newPromo.maxDiscountAmount}
               onChangeText={(maxDiscountAmount) => setNewPromo((prev) => ({ ...prev, maxDiscountAmount }))}
             />
+            <TextInput
+              placeholder="Bildirim mesaji (opsiyonel)"
+              placeholderTextColor="#6B7280"
+              style={[styles.input, styles.notificationMessageInput]}
+              multiline
+              numberOfLines={3}
+              textAlignVertical="top"
+              value={newPromo.notificationMessage}
+              onChangeText={(notificationMessage) => setNewPromo((prev) => ({ ...prev, notificationMessage }))}
+            />
 
             {promoMode === 'special' && (
               <>
@@ -497,6 +608,117 @@ export default function AdminPanel({ restaurants, orders, promotions, onLogout }
           </View>
         </TouchableWithoutFeedback>
       </Modal>
+
+      <Modal visible={notificationModalVisible} transparent animationType="slide">
+        <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
+          <View style={styles.modalOverlay}>
+            <TouchableWithoutFeedback onPress={() => {}}>
+              <View style={styles.modalContent}>
+                <Text style={styles.modalTitle}>Bildirim Gonder</Text>
+
+                <TextInput
+                  placeholder="Baslik (Orn: Sana kupon tanimlandi)"
+                  placeholderTextColor="#6B7280"
+                  style={styles.input}
+                  value={newNotification.title}
+                  onChangeText={(title) => setNewNotification((prev) => ({ ...prev, title }))}
+                />
+                <TextInput
+                  placeholder="Mesaj"
+                  placeholderTextColor="#6B7280"
+                  multiline
+                  numberOfLines={4}
+                  textAlignVertical="top"
+                  style={[styles.input, styles.notificationMessageInput]}
+                  value={newNotification.message}
+                  onChangeText={(message) => setNewNotification((prev) => ({ ...prev, message }))}
+                />
+
+                <View style={styles.typeRow}>
+                  <TouchableOpacity
+                    onPress={() => {
+                      setNotificationAudience('all');
+                      setSelectedNotificationUserIds([]);
+                    }}
+                    style={[styles.typeBtn, notificationAudience === 'all' && styles.typeBtnActive]}
+                  >
+                    <Text style={[styles.typeBtnText, notificationAudience === 'all' && styles.typeBtnTextActive]}>Herkes</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    onPress={() => setNotificationAudience('special')}
+                    style={[styles.typeBtn, notificationAudience === 'special' && styles.typeBtnActive]}
+                  >
+                    <Text style={[styles.typeBtnText, notificationAudience === 'special' && styles.typeBtnTextActive]}>Secili</Text>
+                  </TouchableOpacity>
+                </View>
+
+                {notificationAudience === 'special' && (
+                  <>
+                    <Text style={styles.specialTitle}>Hedef musteriler</Text>
+                    {topCustomers.length === 0 ? (
+                      <Text style={styles.emptyTopCustomerText}>Henuz siparis yok, secili bildirim gonderilemiyor.</Text>
+                    ) : (
+                      <>
+                        <View style={styles.quickSelectRow}>
+                          <TouchableOpacity
+                            onPress={() => setSelectedNotificationUserIds(topCustomers.slice(0, 5).map((customer) => customer.id))}
+                            style={styles.quickBtn}
+                          >
+                            <Text style={styles.quickBtnText}>Ilk 5</Text>
+                          </TouchableOpacity>
+                          <TouchableOpacity
+                            onPress={() => setSelectedNotificationUserIds(topCustomers.map((customer) => customer.id))}
+                            style={styles.quickBtn}
+                          >
+                            <Text style={styles.quickBtnText}>Tumunu Sec</Text>
+                          </TouchableOpacity>
+                          <TouchableOpacity onPress={() => setSelectedNotificationUserIds([])} style={styles.quickBtn}>
+                            <Text style={styles.quickBtnText}>Temizle</Text>
+                          </TouchableOpacity>
+                        </View>
+
+                        <ScrollView style={styles.customerList} nestedScrollEnabled keyboardShouldPersistTaps="handled">
+                          {topCustomers.map((customer) => {
+                            const selected = selectedNotificationUserIds.includes(customer.id);
+                            return (
+                              <TouchableOpacity
+                                key={customer.id}
+                                onPress={() => toggleNotificationTargetUser(customer.id)}
+                                style={[styles.customerRow, selected && styles.customerRowSelected]}
+                              >
+                                <Text style={[styles.customerName, selected && styles.customerNameSelected]} numberOfLines={1}>
+                                  {customer.name}
+                                </Text>
+                                <Text style={[styles.customerCount, selected && styles.customerNameSelected]}>
+                                  {customer.orderCount} siparis
+                                </Text>
+                              </TouchableOpacity>
+                            );
+                          })}
+                        </ScrollView>
+                      </>
+                    )}
+                  </>
+                )}
+
+                <TouchableOpacity onPress={sendManualNotification} style={styles.saveBtn}>
+                  <Text style={styles.saveBtnText}>Gonder</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={() => {
+                    setNotificationModalVisible(false);
+                    setNotificationAudience('all');
+                    setSelectedNotificationUserIds([]);
+                  }}
+                  style={styles.cancelBtn}
+                >
+                  <Text style={styles.cancelBtnText}>Iptal</Text>
+                </TouchableOpacity>
+              </View>
+            </TouchableWithoutFeedback>
+          </View>
+        </TouchableWithoutFeedback>
+      </Modal>
       </SafeAreaView>
     </TouchableWithoutFeedback>
   );
@@ -516,6 +738,7 @@ const styles = StyleSheet.create({
   content: { padding: 20, paddingBottom: 40 },
   sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 },
   promoSectionHeader: { marginTop: 12, flexWrap: 'wrap' },
+  notificationSectionHeader: { marginTop: 2 },
   sectionTitle: { fontWeight: 'bold', fontSize: 18, color: '#1F2937' },
   addBtn: {
     backgroundColor: '#2563EB',
@@ -527,6 +750,7 @@ const styles = StyleSheet.create({
   },
   promoBtn: { backgroundColor: '#EA580C' },
   specialPromoBtn: { backgroundColor: '#7C3AED' },
+  notificationBtn: { backgroundColor: '#0F766E' },
   addBtnText: { color: 'white', fontWeight: 'bold', marginLeft: 6 },
   promoActionRow: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 8, flexShrink: 1, maxWidth: '100%' },
   card: {
@@ -565,6 +789,7 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     backgroundColor: '#F9FAFB'
   },
+  notificationMessageInput: { minHeight: 95 },
   typeRow: { flexDirection: 'row', gap: 10, marginBottom: 12 },
   typeBtn: {
     flex: 1,

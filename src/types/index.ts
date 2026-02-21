@@ -13,6 +13,7 @@ export interface UserType {
   name: string;
   email?: string;
   phone?: string;
+  expoPushTokens?: string[];
   addresses: Address[];
   favorites: string[];
 }
@@ -65,6 +66,20 @@ export interface Promotion {
   startsAt?: number;
   endsAt?: number;
   createdAt?: string;
+}
+
+export interface AppNotification {
+  id: string;
+  title: string;
+  message: string;
+  type: 'manual' | 'promotion' | 'order_status';
+  targetType: 'all' | 'users';
+  targetUserIds?: string[];
+  relatedPromoCode?: string | null;
+  relatedOrderId?: string | null;
+  createdAt: number;
+  createdBy?: string;
+  readBy?: string[];
 }
 
 export interface Order {

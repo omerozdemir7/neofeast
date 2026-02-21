@@ -24,6 +24,9 @@
       "package": "com.cprookie.neofeast",
       "googleServicesFile": "./google-services.json"
     },
+    "plugins": [
+      "expo-notifications"
+    ],
     "runtimeVersion": {
       "policy": "appVersion"
     },

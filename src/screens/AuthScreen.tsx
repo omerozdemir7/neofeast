@@ -33,6 +33,7 @@ export default function AuthScreen({ onLogin }: { onLogin: (user: any) => void }
           name: name.trim(),
           username: generatedUsername,
           role: 'customer',
+          expoPushTokens: [],
           addresses: [],
           favorites: [],
           createdAt: new Date().toISOString()

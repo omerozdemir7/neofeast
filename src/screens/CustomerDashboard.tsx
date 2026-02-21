@@ -1,9 +1,10 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Platform, Alert } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Platform, Alert, Modal, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Moon, Sun, User } from 'lucide-react-native';
-import { Restaurant, Order, UserType, CartItem, MenuItem, Promotion } from '../types';
+import { Moon, Sun, User, Bell } from 'lucide-react-native';
+import { arrayUnion, doc, updateDoc } from 'firebase/firestore';
+import { Restaurant, Order, UserType, CartItem, MenuItem, Promotion, AppNotification } from '../types';
 import CustomerHome from './customer/CustomerHome';
 import CustomerCart from './customer/CustomerCart';
 import CustomerOrders from './customer/CustomerOrders';
@@ -11,6 +12,7 @@ import CustomerProfile from './customer/CustomerProfile';
 import RestaurantDetailModal from './customer/RestaurantDetailModal';
 import CustomerBottomBar from './customer/CustomerBottomBar';
 import { customerThemes, ThemeMode, themeStorageKey } from './customer/theme';
+import { db } from '../firebaseConfig';
 
 type Tab = 'home' | 'search' | 'cart' | 'orders' | 'profile';
 
@@ -75,6 +77,7 @@ interface Props {
   restaurants: Restaurant[];
   orders: Order[];
   promotions: Promotion[];
+  notifications: AppNotification[];
   onLogout: () => void;
   refreshData: () => void;
   onUpdateUser: (user: UserType) => void;
@@ -86,6 +89,7 @@ export default function CustomerDashboard({
   restaurants,
   orders,
   promotions,
+  notifications,
   onLogout,
   refreshData,
   onUpdateUser,
@@ -95,6 +99,7 @@ export default function CustomerDashboard({
   const [cart, setCart] = useState<CartItem[]>([]);
   const [selectedRestaurant, setSelectedRestaurant] = useState<Restaurant | null>(null);
   const [restaurantModalVisible, setRestaurantModalVisible] = useState(false);
+  const [notificationModalVisible, setNotificationModalVisible] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [themeMode, setThemeMode] = useState<ThemeMode>('light');
   const notify = (message: string, type: 'success' | 'error' | 'info' = 'info') => onNotify(message, type);
@@ -182,9 +187,39 @@ export default function CustomerDashboard({
     });
   }, [promotions, user._id]);
 
+  const customerNotifications = useMemo(() => (
+    notifications
+      .filter((notification) => {
+        if (notification.targetType === 'all') return true;
+        return (notification.targetUserIds || []).includes(user._id);
+      })
+      .sort((a, b) => b.createdAt - a.createdAt)
+  ), [notifications, user._id]);
+
+  const unreadNotificationIds = useMemo(() => (
+    customerNotifications
+      .filter((notification) => !(notification.readBy || []).includes(user._id))
+      .map((notification) => notification.id)
+  ), [customerNotifications, user._id]);
+
+  const unreadNotificationCount = unreadNotificationIds.length;
+
   const handleSelectRestaurant = (restaurant: Restaurant) => {
     setSelectedRestaurant(restaurant);
     setRestaurantModalVisible(true);
+  };
+
+  const openNotificationCenter = async () => {
+    setNotificationModalVisible(true);
+    if (unreadNotificationIds.length === 0) return;
+
+    await Promise.all(
+      unreadNotificationIds.map((notificationId) => (
+        updateDoc(doc(db, 'notifications', notificationId), {
+          readBy: arrayUnion(user._id)
+        }).catch(() => null)
+      ))
+    );
   };
 
   const handleAddToCart = (item: MenuItem, restaurant: Restaurant) => {
@@ -232,6 +267,24 @@ export default function CustomerDashboard({
       <View style={[styles.topBar, { backgroundColor: theme.surface, borderBottomColor: theme.border }]}>
         <Text style={[styles.brand, { color: theme.textPrimary }]}>NEOFEAST</Text>
         <View style={styles.actions}>
+          <TouchableOpacity
+            onPress={openNotificationCenter}
+            style={[styles.iconButton, { backgroundColor: theme.inputBackground }]}
+            accessibilityRole="button"
+            accessibilityLabel="Bildirimleri ac"
+          >
+            <View style={styles.notificationBellWrap}>
+              <Bell color={theme.textPrimary} size={20} />
+              {unreadNotificationCount > 0 && (
+                <View style={[styles.notificationBadge, { backgroundColor: theme.danger }]}>
+                  <Text style={[styles.notificationBadgeText, { color: theme.accentContrast }]}>
+                    {unreadNotificationCount > 99 ? '99+' : unreadNotificationCount}
+                  </Text>
+                </View>
+              )}
+            </View>
+          </TouchableOpacity>
+
           <TouchableOpacity
             onPress={toggleTheme}
             style={[styles.iconButton, { backgroundColor: theme.inputBackground }]}
@@ -301,6 +354,79 @@ export default function CustomerDashboard({
         />
       )}
 
+      <Modal
+        visible={notificationModalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setNotificationModalVisible(false)}
+      >
+        <View style={styles.notificationOverlay}>
+          <View style={[styles.notificationModal, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+            <View style={[styles.notificationHeader, { borderBottomColor: theme.border }]}>
+              <Text style={[styles.notificationTitle, { color: theme.textPrimary }]}>Bildirimler</Text>
+              <TouchableOpacity onPress={() => setNotificationModalVisible(false)} style={styles.notificationCloseBtn}>
+                <Text style={[styles.notificationCloseText, { color: theme.accent }]}>Kapat</Text>
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView style={styles.notificationList} contentContainerStyle={styles.notificationListContent}>
+              {customerNotifications.length === 0 ? (
+                <Text style={[styles.notificationEmptyText, { color: theme.textMuted }]}>
+                  Henuz bildirim yok.
+                </Text>
+              ) : (
+                customerNotifications.map((notification) => {
+                  const isRead = (notification.readBy || []).includes(user._id);
+                  return (
+                    <View
+                      key={notification.id}
+                      style={[
+                        styles.notificationCard,
+                        {
+                          backgroundColor: isRead ? theme.inputBackground : '#FEF3C7',
+                          borderColor: theme.border
+                        }
+                      ]}
+                    >
+                      <Text style={[styles.notificationCardTitle, { color: theme.textPrimary }]}>
+                        {notification.title}
+                      </Text>
+                      <Text style={[styles.notificationCardMessage, { color: theme.textSecondary }]}>
+                        {notification.message}
+                      </Text>
+
+                      {notification.relatedPromoCode ? (
+                        <Text style={[styles.notificationCode, { color: theme.accent }]}>
+                          Kod: {notification.relatedPromoCode}
+                        </Text>
+                      ) : null}
+                      {notification.relatedOrderId ? (
+                        <Text style={[styles.notificationCode, { color: theme.accent }]}>
+                          Siparis No: {notification.relatedOrderId.slice(0, 8)}
+                        </Text>
+                      ) : null}
+
+                      <View style={styles.notificationMetaRow}>
+                        <Text style={[styles.notificationMetaText, { color: theme.textMuted }]}>
+                          {notification.type === 'promotion'
+                            ? 'Promosyon'
+                            : notification.type === 'order_status'
+                              ? 'Siparis'
+                              : 'Duyuru'}
+                        </Text>
+                        <Text style={[styles.notificationMetaText, { color: theme.textMuted }]}>
+                          {new Date(notification.createdAt).toLocaleString('tr-TR')}
+                        </Text>
+                      </View>
+                    </View>
+                  );
+                })
+              )}
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
+
       <CustomerBottomBar
         activeTab={activeTab}
         onTabChange={(tab) => setActiveTab(tab)}
@@ -332,5 +458,56 @@ const styles = StyleSheet.create({
   brand: { fontSize: 24, fontWeight: '900' },
   actions: { flexDirection: 'row', alignItems: 'center' },
   iconButton: { width: 38, height: 38, borderRadius: 19, alignItems: 'center', justifyContent: 'center' },
-  profileButton: { marginLeft: 10 }
+  profileButton: { marginLeft: 10 },
+  notificationBellWrap: { position: 'relative' },
+  notificationBadge: {
+    position: 'absolute',
+    top: -6,
+    right: -10,
+    borderRadius: 10,
+    minWidth: 16,
+    height: 16,
+    paddingHorizontal: 4,
+    alignItems: 'center',
+    justifyContent: 'center'
+  },
+  notificationBadgeText: { fontSize: 9, fontWeight: '700' },
+  notificationOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.45)',
+    justifyContent: 'center',
+    paddingHorizontal: 18,
+    paddingVertical: 40
+  },
+  notificationModal: {
+    borderWidth: 1,
+    borderRadius: 16,
+    maxHeight: '78%',
+    overflow: 'hidden'
+  },
+  notificationHeader: {
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center'
+  },
+  notificationTitle: { fontSize: 17, fontWeight: '800' },
+  notificationCloseBtn: { paddingHorizontal: 8, paddingVertical: 4 },
+  notificationCloseText: { fontWeight: '700' },
+  notificationList: { maxHeight: '100%' },
+  notificationListContent: { padding: 12 },
+  notificationEmptyText: { textAlign: 'center', paddingVertical: 20, fontSize: 14 },
+  notificationCard: {
+    borderWidth: 1,
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 10
+  },
+  notificationCardTitle: { fontSize: 14, fontWeight: '800', marginBottom: 4 },
+  notificationCardMessage: { fontSize: 13, lineHeight: 18 },
+  notificationCode: { marginTop: 6, fontWeight: '700', fontSize: 12 },
+  notificationMetaRow: { marginTop: 8, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  notificationMetaText: { fontSize: 11, fontWeight: '600' }
 });
